@@ -8,6 +8,9 @@ export default function GenerateQuestionsPage() {
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [jobStatus, setJobStatus] = useState('');
 
   const [formData, setFormData] = useState({
     subject_id: '1',
@@ -24,11 +27,38 @@ export default function GenerateQuestionsPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const pollJobStatus = async (id: string) => {
+    try {
+      const res = await apiClient.get(`/ai/questions/job/${id}`);
+      const data = res.data;
+      
+      setProgress(data.progress || 0);
+      setJobStatus(data.state);
+
+      if (data.state === 'completed') {
+        setLoading(false);
+        setSuccessMsg('Questions generated successfully!');
+      } else if (data.state === 'failed') {
+        setLoading(false);
+        setErrorMsg(`Generation failed: ${data.failedReason || 'Unknown error'}`);
+      } else {
+        // Continue polling
+        setTimeout(() => pollJobStatus(id), 2000);
+      }
+    } catch (err) {
+      console.error('Failed to poll status', err);
+      // Fallback: stop polling on error
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setSuccessMsg('');
     setErrorMsg('');
+    setProgress(0);
+    setJobStatus('queued');
 
     try {
       const res = await apiClient.post('/ai/questions/generate', {
@@ -38,10 +68,17 @@ export default function GenerateQuestionsPage() {
         learning_outcome_id: parseInt(formData.learning_outcome_id),
         count: parseInt(formData.count.toString()),
       });
-      setSuccessMsg(res.data.message || 'AI Question generation task queued successfully!');
+      
+      const newJobId = res.data.job_id;
+      if (newJobId) {
+        setJobId(newJobId);
+        pollJobStatus(newJobId);
+      } else {
+        setSuccessMsg(res.data.message || 'AI Question generation task queued successfully!');
+        setLoading(false);
+      }
     } catch (err: any) {
       setErrorMsg(err.response?.data?.message || 'Failed to queue generation. Please try again.');
-    } finally {
       setLoading(false);
     }
   };
@@ -76,6 +113,24 @@ export default function GenerateQuestionsPage() {
           <div>
             <h4 className="text-sm font-bold text-red-800">Error</h4>
             <p className="text-xs font-medium text-red-600 mt-1">{errorMsg}</p>
+          </div>
+        </div>
+      )}
+
+      {loading && jobId && (
+        <div className="mb-6 p-6 bg-white border border-indigo-100 rounded-3xl shadow-[0_4px_24px_-8px_rgba(0,0,0,0.05)]">
+          <div className="flex justify-between items-center mb-2">
+            <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+              <Loader2 className="animate-spin text-indigo-500" size={16} />
+              Generating Questions via AI ({jobStatus})...
+            </h4>
+            <span className="text-sm font-bold text-indigo-600">{progress}%</span>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+            <div 
+              className="bg-gradient-to-r from-indigo-500 to-blue-500 h-2.5 rounded-full transition-all duration-500 ease-out" 
+              style={{ width: `${progress}%` }}
+            ></div>
           </div>
         </div>
       )}
