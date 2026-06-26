@@ -34,8 +34,10 @@ export default function LoginPage() {
       localStorage.setItem('refresh_token', refresh_token);
       localStorage.setItem('user', JSON.stringify(user));
 
-      if (roles.includes('SUPER_ADMIN') || roles.includes('SME')) {
+      if (roles.includes('SUPER_ADMIN')) {
         router.push('/super-admin/dashboard');
+      } else if (roles.includes('SME')) {
+        router.push('/super-admin/questions/generate');
       } else {
         router.push('/teacher/students');
       }
