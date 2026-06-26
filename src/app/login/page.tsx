@@ -37,7 +37,7 @@ export default function LoginPage() {
       if (roles.includes('SUPER_ADMIN')) {
         router.push('/super-admin/dashboard');
       } else if (roles.includes('SME')) {
-        router.push('/super-admin/questions/generate');
+        router.push('/sme/questions/generate');
       } else {
         router.push('/teacher/students');
       }

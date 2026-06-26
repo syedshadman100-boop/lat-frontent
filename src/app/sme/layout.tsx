@@ -3,28 +3,21 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BookOpen, LayoutDashboard, FileQuestion, FileText, Users, BarChart2, Activity, ChevronDown, Menu, X, LogOut } from 'lucide-react';
+import { BookOpen, LayoutDashboard, FileQuestion, FileText, Users, BarChart2, Activity, ChevronDown, Menu, X } from 'lucide-react';
+
+import { LogOut } from 'lucide-react';
 
 const MENU_GROUPS = [
   {
     title: 'MAIN',
     items: [
-      { name: 'Dashboard', href: '/super-admin/dashboard', icon: LayoutDashboard },
-      { name: 'Question', href: '/sme/questions', icon: FileQuestion },
-      { name: 'LAT Exam', href: '/super-admin/lat-exams', icon: FileText },
-      { name: 'Users management', href: '/super-admin/users', icon: Users },
-    ],
-  },
-  {
-    title: 'REPORTS',
-    items: [
-      { name: 'Student Reports', href: '/super-admin/reports/student', icon: BarChart2 },
-      { name: 'Assessment Reports', href: '/super-admin/reports/assessment', icon: Activity },
+      { name: 'Generate Questions', href: '/sme/questions/generate', icon: FileQuestion },
+      { name: 'Review Questions', href: '/sme/questions/review', icon: FileText },
     ],
   },
 ];
 
-export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
+export default function SmeLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -135,15 +128,14 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           <div className="ml-auto flex items-center gap-3">
             <div className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 md:hover:bg-gray-200/50 p-1.5 pr-3 rounded-full transition-colors">
               <div className="text-right flex flex-col justify-center hidden sm:flex">
-                <span className="text-sm font-bold text-gray-900 leading-none">Dr. Aman</span>
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mt-1">Super Admin</span>
+                <span className="text-sm font-bold text-gray-900 leading-none">Subject Expert</span>
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mt-1">SME</span>
               </div>
               <div className="h-8 w-8 rounded-full bg-gray-200 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center text-gray-400">
                 <Users size={16} />
               </div>
-              <ChevronDown size={14} className="text-gray-400 hidden sm:block" />
             </div>
-
+            
             <button 
               onClick={handleLogout}
               className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors ml-2 flex items-center gap-2"
