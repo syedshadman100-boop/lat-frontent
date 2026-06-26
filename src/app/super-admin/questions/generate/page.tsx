@@ -15,7 +15,7 @@ export default function GenerateQuestionsPage() {
   const [formData, setFormData] = useState({
     subject_id: '1',
     grade_level: '5',
-    learning_outcome_id: '48',
+    learning_outcome_id: '1',
     bloom_level: 'understanding',
     difficulty: 'medium',
     question_type: 'mcq',
