@@ -148,6 +148,17 @@ export default function ReviewQuestionsPage() {
             </div>
 
             <div className="p-6 flex-1 overflow-y-auto">
+              {selectedQuestion.aiReviewerFeedback && (
+                <div className="mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                  <h4 className="text-xs font-bold text-indigo-800 uppercase tracking-widest mb-2 flex items-center gap-2">
+                    <Check size={14} /> AI Reviewer Feedback
+                  </h4>
+                  <p className="text-sm font-medium text-indigo-900 leading-relaxed">
+                    {selectedQuestion.aiReviewerFeedback}
+                  </p>
+                </div>
+              )}
+
               <h4 className="text-xs font-bold text-gray-800 uppercase tracking-widest mb-4">Options & Distractors</h4>
               <div className="space-y-3">
                 {selectedQuestion.options?.map((opt: any, index: number) => (
