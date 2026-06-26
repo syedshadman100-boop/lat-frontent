@@ -2,13 +2,13 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { 
-  Search, 
-  Plus, 
-  Filter, 
-  Users, 
-  GraduationCap, 
-  BookOpen, 
+import {
+  Search,
+  Plus,
+  Filter,
+  Users,
+  GraduationCap,
+  BookOpen,
   CheckCircle,
   Download,
   MoreVertical,
@@ -27,13 +27,13 @@ export default function SuperAdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState('All Roles');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [schoolTypeFilter, setSchoolTypeFilter] = useState('All School Types');
-  
+
   const [users, setUsers] = useState<any[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<any | null>(null);
 
@@ -80,7 +80,7 @@ export default function SuperAdminUsersPage() {
 
   const handleExport = () => {
     if (users.length === 0) return;
-    
+
     // Create CSV content
     const headers = ['Name', 'Role', 'Mobile', 'Email', 'School/Organization', 'UDISE', 'Status', 'Created On'];
     const csvContent = [
@@ -122,8 +122,8 @@ export default function SuperAdminUsersPage() {
   };
 
   return (
-    <div className="min-h-screen p-8 text-gray-900 font-sans max-w-[1600px] mx-auto bg-[#f4f7fb]">
-      
+    <div className="max-w-[1400px] mx-auto text-gray-900">
+
       {/* Header & Breadcrumb */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -145,20 +145,20 @@ export default function SuperAdminUsersPage() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] p-4 flex flex-col md:flex-row items-center gap-4 mb-6">
         <div className="relative flex-1 w-full md:max-w-md">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input 
-            type="text" 
-            placeholder="Search by name, mobile, email or UDISE code..." 
+          <input
+            type="text"
+            placeholder="Search by name, mobile, email or UDISE code..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all placeholder:text-gray-400 placeholder:font-normal text-gray-900"
           />
         </div>
-        
+
         <div className="flex items-center gap-4 flex-1 w-full flex-wrap md:flex-nowrap">
           <div className="flex-1 min-w-[140px]">
             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">Role</label>
             <div className="relative">
-              <select 
+              <select
                 className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
                 value={roleFilter}
                 onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
@@ -172,11 +172,11 @@ export default function SuperAdminUsersPage() {
               <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             </div>
           </div>
-          
+
           <div className="flex-1 min-w-[140px]">
             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">School Type</label>
             <div className="relative">
-              <select 
+              <select
                 className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
                 value={schoolTypeFilter}
                 onChange={(e) => { setSchoolTypeFilter(e.target.value); setCurrentPage(1); }}
@@ -193,7 +193,7 @@ export default function SuperAdminUsersPage() {
           <div className="flex-1 min-w-[140px]">
             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">Status</label>
             <div className="relative">
-              <select 
+              <select
                 className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
                 value={statusFilter}
                 onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
@@ -208,9 +208,9 @@ export default function SuperAdminUsersPage() {
         </div>
 
         <div className="flex items-end self-end md:self-auto h-full mt-5 md:mt-0">
-           <button className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl text-sm font-semibold transition-all">
-             <Filter size={16} className="text-gray-500" /> Filters
-           </button>
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl text-sm font-semibold transition-all">
+            <Filter size={16} className="text-gray-500" /> Filters
+          </button>
         </div>
       </div>
 
@@ -264,7 +264,7 @@ export default function SuperAdminUsersPage() {
         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-[15px] font-bold text-gray-900">All Users <span className="text-gray-400 font-medium ml-1">({totalCount})</span></h2>
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={handleExport}
               className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
@@ -281,17 +281,12 @@ export default function SuperAdminUsersPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-white border-b border-gray-100">
-                <th className="py-4 pl-5 pr-2 w-10">
-                  <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                </th>
-                <th className="py-4 px-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap cursor-pointer hover:text-gray-900">Name <span className="inline-block ml-1 text-gray-300">↕</span></th>
+                <th className="py-4 px-3 pl-5 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap cursor-pointer hover:text-gray-900">Name <span className="inline-block ml-1 text-gray-300">↕</span></th>
                 <th className="py-4 px-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Role</th>
-                <th className="py-4 px-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Mobile Number</th>
                 <th className="py-4 px-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Email</th>
                 <th className="py-4 px-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">School / Organization</th>
                 <th className="py-4 px-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">UDISE Code / Org. Type</th>
                 <th className="py-4 px-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
-                <th className="py-4 px-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Created On</th>
                 <th className="py-4 pr-5 pl-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Actions</th>
               </tr>
             </thead>
@@ -317,16 +312,13 @@ export default function SuperAdminUsersPage() {
                   const initials = (row.firstName?.[0] || '') + (row.lastName?.[0] || '');
                   const schoolName = row.school?.schoolName || row.organization?.name || 'N/A';
                   const udiseCode = row.school?.udiseCode || 'Organization';
-                  const statusColor = row.status === 'active' 
-                    ? 'text-emerald-600 bg-emerald-50 border-emerald-100' 
+                  const statusColor = row.status === 'active'
+                    ? 'text-emerald-600 bg-emerald-50 border-emerald-100'
                     : 'text-red-600 bg-red-50 border-red-100';
 
                   return (
                     <tr key={row.id} className="hover:bg-[#f8fafc] transition-colors group">
-                      <td className="py-3 pl-5 pr-2">
-                        <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                      </td>
-                      <td className="py-3 px-3">
+                      <td className="py-3 px-3 pl-5">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${getAvatarBg(row.id)}`}>
                             {initials}
@@ -343,9 +335,6 @@ export default function SuperAdminUsersPage() {
                         </span>
                       </td>
                       <td className="py-3 px-3">
-                        <span className="text-xs font-semibold text-gray-700">{row.phone || '-'}</span>
-                      </td>
-                      <td className="py-3 px-3">
                         <span className="text-xs font-semibold text-gray-600">{row.email}</span>
                       </td>
                       <td className="py-3 px-3 max-w-[200px]">
@@ -359,13 +348,8 @@ export default function SuperAdminUsersPage() {
                           {row.status}
                         </span>
                       </td>
-                      <td className="py-3 px-3">
-                        <span className="text-xs font-medium text-gray-600 whitespace-nowrap">
-                          {new Date(row.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </span>
-                      </td>
                       <td className="py-3 pr-5 pl-3 text-center relative">
-                        <button 
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setOpenMenuId(openMenuId === row.id ? null : row.id);
@@ -374,11 +358,11 @@ export default function SuperAdminUsersPage() {
                         >
                           <MoreVertical size={16} />
                         </button>
-                        
+
                         {/* Dropdown Menu */}
                         {openMenuId === row.id && (
                           <div className="absolute right-8 top-10 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-10 text-left">
-                            <button 
+                            <button
                               onClick={() => { setEditingUser(row); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                             >
@@ -407,7 +391,7 @@ export default function SuperAdminUsersPage() {
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-medium text-gray-500">Rows per page</span>
               <div className="relative">
-                <select 
+                <select
                   className="appearance-none p-1 pr-6 border border-gray-200 rounded text-gray-600 text-xs font-semibold bg-white cursor-pointer focus:outline-none hover:bg-gray-50"
                   value={pageSize}
                   onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
@@ -419,9 +403,9 @@ export default function SuperAdminUsersPage() {
                 <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
-            
+
             <div className="flex items-center gap-1">
-              <button 
+              <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1 || isLoading}
                 className="w-7 h-7 flex items-center justify-center rounded border border-gray-200 text-gray-500 hover:text-gray-800 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -431,7 +415,7 @@ export default function SuperAdminUsersPage() {
               <div className="px-3 text-[11px] font-semibold text-gray-700">
                 Page {currentPage} of {Math.max(1, Math.ceil(totalCount / pageSize))}
               </div>
-              <button 
+              <button
                 onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalCount / pageSize), p + 1))}
                 disabled={currentPage === Math.ceil(totalCount / pageSize) || totalCount === 0 || isLoading}
                 className="w-7 h-7 flex items-center justify-center rounded border border-gray-200 text-gray-500 hover:text-gray-800 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -455,7 +439,7 @@ export default function SuperAdminUsersPage() {
             </div>
             <div className="p-6">
               <p className="text-sm font-medium text-gray-500 mb-6">Editing details for <span className="font-bold text-gray-900">{editingUser.firstName} {editingUser.lastName}</span>.</p>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1.5">First Name</label>

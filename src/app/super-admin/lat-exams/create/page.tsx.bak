@@ -1,0 +1,344 @@
+'use client';
+
+import React, { useState } from 'react';
+import { ArrowLeft, Info, HelpCircle, CheckCircle2, ChevronDown, Calendar, Clock, BookOpen, Layers } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+export default function CreateLatExam() {
+  const router = useRouter();
+  const [latType, setLatType] = useState('LAT-I');
+
+  return (
+    <div className="text-gray-900 pb-24 font-sans">
+      
+      {/* Header Area */}
+      <div className="pb-2">
+        <div className="max-w-[1200px] mx-auto">
+          <button 
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-[13px] font-bold text-gray-900 hover:text-[#2563eb] transition-colors mb-4"
+          >
+            <ArrowLeft size={16} strokeWidth={2.5} /> Back
+          </button>
+          
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Create LAT Exam</h1>
+          <p className="text-[#64748b] text-[13px] font-medium mt-1">Generate a new LAT exam based on academic year and grade.</p>
+        </div>
+      </div>
+
+      {/* Main Layout Grid */}
+      <div className="max-w-[1200px] mx-auto pt-4">
+        
+        {/* Stepper Card */}
+        <div className="bg-white rounded-2xl border border-[#e2e8f0] px-8 py-5 mb-8 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
+            {/* Step 1 */}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-[#2563eb] text-white flex items-center justify-center text-[13px] font-bold shadow-sm shadow-blue-200">
+                1
+              </div>
+              <div>
+                <p className="text-[13px] font-bold text-[#2563eb]">Basic Details</p>
+                <p className="text-[11px] font-medium text-[#64748b]">Set exam details</p>
+              </div>
+            </div>
+            
+            <div className="flex-1 h-[1px] bg-[#e2e8f0]"></div>
+
+            {/* Step 2 */}
+            <div className="flex items-center gap-3 opacity-50">
+              <div className="w-8 h-8 rounded-full border border-[#cbd5e1] text-[#64748b] flex items-center justify-center text-[13px] font-bold bg-white">
+                2
+              </div>
+              <div>
+                <p className="text-[13px] font-bold text-gray-900">Question Distribution</p>
+                <p className="text-[11px] font-medium text-[#64748b]">View subject & question split</p>
+              </div>
+            </div>
+
+            <div className="flex-1 h-[1px] bg-[#e2e8f0]"></div>
+
+            {/* Step 3 */}
+            <div className="flex items-center gap-3 opacity-50">
+              <div className="w-8 h-8 rounded-full border border-[#cbd5e1] text-[#64748b] flex items-center justify-center text-[13px] font-bold bg-white">
+                3
+              </div>
+              <div>
+                <p className="text-[13px] font-bold text-gray-900">Exam Created</p>
+                <p className="text-[11px] font-medium text-[#64748b]">LAT exam will be created</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Form and Sidebar Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
+          
+          {/* Left Column (Forms) */}
+          <div className="space-y-5">
+          
+          {/* Exam Details Card */}
+          <div className="bg-white rounded-2xl border border-[#e2e8f0] p-6 shadow-sm">
+            <h2 className="text-[17px] font-black text-gray-900">Exam Details</h2>
+            <p className="text-[#64748b] text-[13px] font-medium mb-6">Provide basic information for the LAT exam.</p>
+
+            {/* LAT Type & Grade */}
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_200px] gap-4 mb-6">
+              
+              <div className="col-span-1 md:col-span-2">
+                <label className="block text-[11px] font-bold text-gray-900 mb-2">LAT Type <span className="text-red-500">*</span></label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* LAT-I Card */}
+                  <div 
+                    onClick={() => setLatType('LAT-I')}
+                    className={`cursor-pointer rounded-xl border p-4 transition-all hover:shadow-md ${
+                      latType === 'LAT-I' 
+                        ? 'border-[#2563eb] bg-[#eff4ff] shadow-sm' 
+                        : 'border-[#e2e8f0] bg-white hover:border-[#cbd5e1]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        latType === 'LAT-I' ? 'border-[#2563eb]' : 'border-[#cbd5e1]'
+                      }`}>
+                        {latType === 'LAT-I' && <div className="w-2 h-2 rounded-full bg-[#2563eb]" />}
+                      </div>
+                      <span className="text-[13px] font-bold text-gray-900">LAT-I</span>
+                    </div>
+                    <p className="text-[11px] font-medium text-[#64748b] ml-6 leading-relaxed">
+                      Assesses learning of the previous academic year.
+                    </p>
+                  </div>
+
+                  {/* LAT-II Card */}
+                  <div 
+                    onClick={() => setLatType('LAT-II')}
+                    className={`cursor-pointer rounded-xl border p-4 transition-all hover:shadow-md ${
+                      latType === 'LAT-II' 
+                        ? 'border-[#2563eb] bg-[#eff4ff] shadow-sm' 
+                        : 'border-[#e2e8f0] bg-white hover:border-[#cbd5e1]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        latType === 'LAT-II' ? 'border-[#2563eb]' : 'border-[#cbd5e1]'
+                      }`}>
+                        {latType === 'LAT-II' && <div className="w-2 h-2 rounded-full bg-[#2563eb]" />}
+                      </div>
+                      <span className="text-[13px] font-bold text-gray-900">LAT-II</span>
+                    </div>
+                    <p className="text-[11px] font-medium text-[#64748b] ml-6 leading-relaxed">
+                      Assesses learning of the current academic year
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Grade Dropdown */}
+              <div>
+                <label className="block text-[11px] font-bold text-gray-900 mb-2">Current Grade <span className="text-red-500">*</span></label>
+                <div className="relative">
+                  <select className="w-full appearance-none bg-white border border-[#e2e8f0] rounded-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-shadow">
+                    <option>Grade 5</option>
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
+                </div>
+              </div>
+            </div>
+
+            {/* Exam Name */}
+            <div className="mb-6">
+              <label className="block text-[11px] font-bold text-gray-900 mb-2">Exam Name <span className="text-red-500">*</span></label>
+              <input 
+                type="text" 
+                defaultValue="Grade 5 LAT-I (2026)"
+                className="w-full bg-white border border-[#e2e8f0] rounded-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-shadow"
+              />
+              <p className="text-[10px] font-medium text-[#94a3b8] mt-2">Give a clear and unique name to the exam.</p>
+            </div>
+
+            {/* Date, Time, Duration */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-[11px] font-bold text-gray-900 mb-2">Exam Date <span className="text-red-500">*</span></label>
+                <div className="relative">
+                  <Calendar size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94a3b8] z-20 pointer-events-none" />
+                  <input 
+                    type="date" 
+                    defaultValue="2026-07-10"
+                    className="w-full pl-10 pr-4 py-3 bg-white border border-[#e2e8f0] rounded-xl text-[13px] font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-shadow [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer relative z-10"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-[11px] font-bold text-gray-900 mb-2">Start Time <span className="text-red-500">*</span></label>
+                <div className="relative">
+                  <Clock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94a3b8] z-20 pointer-events-none" />
+                  <input 
+                    type="time" 
+                    defaultValue="09:00"
+                    className="w-full pl-10 pr-4 py-3 bg-white border border-[#e2e8f0] rounded-xl text-[13px] font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-shadow [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer relative z-10"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-900 mb-2">Duration <span className="text-red-500">*</span></label>
+                <div className="flex">
+                  <input 
+                    type="number" 
+                    defaultValue="90"
+                    className="w-full bg-white border border-[#e2e8f0] border-r-0 rounded-l-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-shadow"
+                  />
+                  <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-r-xl px-4 flex items-center justify-center text-[12px] font-bold text-[#64748b]">
+                    Minutes
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Auto Configuration Box */}
+          <div className="bg-white rounded-2xl border border-[#e2e8f0] p-6 shadow-sm">
+            <h3 className="text-[13px] font-bold text-[#10b981] mb-1">
+              Auto Configuration <span className="text-[#64748b] font-medium">(Based on your selection)</span>
+            </h3>
+            <p className="text-[12px] font-medium text-[#64748b] mb-6">The following settings are configured automatically as per LAT guidelines.</p>
+            
+            <div className="flex flex-col md:flex-row items-start gap-6 md:gap-8">
+              {/* Assessment Group */}
+              <div className="flex gap-4 items-start w-full md:w-auto">
+                <div className="w-12 h-12 rounded-full bg-[#ecfdf5] flex items-center justify-center text-[#10b981] shrink-0 shadow-sm">
+                  <Layers size={22} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider mb-1">Assessment Group</p>
+                  <p className="text-[14px] font-black text-gray-900">Preparatory</p>
+                  <p className="text-[10px] font-medium text-[#94a3b8] mt-1 leading-snug max-w-[150px]">Auto-selected based on Grade 5</p>
+                </div>
+              </div>
+
+              {/* Assessment Basis */}
+              <div className="flex gap-4 items-start md:pl-8 md:border-l border-[#e2e8f0] w-full md:w-auto">
+                <div className="w-12 h-12 rounded-full bg-[#eff4ff] flex items-center justify-center text-[#2563eb] shrink-0 shadow-sm">
+                  <BookOpen size={22} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider mb-1">Assessment Basis</p>
+                  <p className="text-[14px] font-black text-gray-900">Previous Academic Year</p>
+                  <p className="text-[10px] font-medium text-[#94a3b8] mt-1 leading-snug max-w-[180px]">Questions will be generated from Grade 4 competencies (LAT-I)</p>
+                </div>
+              </div>
+
+              {/* Subjects Included */}
+              <div className="flex gap-4 items-start md:pl-8 md:border-l border-[#e2e8f0] w-full md:w-auto">
+                <div className="w-12 h-12 rounded-full bg-[#f5f3ff] flex items-center justify-center text-[#8b5cf6] shrink-0 shadow-sm">
+                  <Layers size={22} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider mb-1">Subjects Included</p>
+                  <p className="text-[14px] font-black text-gray-900">4 Subjects</p>
+                  <p className="text-[10px] font-medium text-[#94a3b8] mt-1 leading-snug max-w-[160px]">English, Hindi, Mathematics, EVS (As applicable for Grade 5)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Info Banner */}
+          <div className="bg-[#eff4ff] border border-[#bfdbfe] rounded-xl p-4 flex items-center gap-3">
+            <Info size={18} className="text-[#2563eb] shrink-0" />
+            <p className="text-[12px] font-medium text-[#334155]">Question paper will be generated automatically based on the above details in the next steps.</p>
+          </div>
+
+        </div>
+
+        {/* Right Column (Info Cards) */}
+        <div className="space-y-5">
+          
+          {/* About LAT */}
+          <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-6 shadow-sm">
+            <h3 className="flex items-center gap-2 text-[14px] font-bold text-gray-900 mb-4">
+              <Info size={16} className="text-[#8b5cf6]" /> About LAT
+            </h3>
+            <ul className="space-y-3">
+              <li className="flex items-start gap-2 text-[12px] font-medium text-[#475569] leading-relaxed">
+                <span className="text-gray-400 mt-1.5 w-1 h-1 bg-gray-400 rounded-full shrink-0"></span>
+                LAT (Learners' Achievement Test) is a competency-based assessment for Grades 3, 5 and 8.
+              </li>
+              <li className="flex items-start gap-2 text-[12px] font-medium text-[#475569] leading-relaxed">
+                <span className="text-gray-400 mt-1.5 w-1 h-1 bg-gray-400 rounded-full shrink-0"></span>
+                LAT-I: Previous academic year competencies
+              </li>
+              <li className="flex items-start gap-2 text-[12px] font-medium text-[#475569] leading-relaxed">
+                <span className="text-gray-400 mt-1.5 w-1 h-1 bg-gray-400 rounded-full shrink-0"></span>
+                LAT-II: Current academic year (Apr - Sep)
+              </li>
+              <li className="flex items-start gap-2 text-[12px] font-medium text-[#475569] leading-relaxed">
+                <span className="text-gray-400 mt-1.5 w-1 h-1 bg-gray-400 rounded-full shrink-0"></span>
+                Questions are MCQs and not chapter based
+              </li>
+            </ul>
+          </div>
+
+          {/* How it works */}
+          <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-6 shadow-sm">
+            <h3 className="flex items-center gap-2 text-[14px] font-bold text-gray-900 mb-4">
+              <HelpCircle size={16} className="text-[#d97706]" /> How it works?
+            </h3>
+            <ul className="space-y-3">
+              <li className="flex items-start gap-2 text-[12px] font-medium text-[#475569] leading-relaxed">
+                <span className="text-gray-400 mt-1.5 w-1 h-1 bg-gray-400 rounded-full shrink-0"></span>
+                You provide basic exam details.
+              </li>
+              <li className="flex items-start gap-2 text-[12px] font-medium text-[#475569] leading-relaxed">
+                <span className="text-gray-400 mt-1.5 w-1 h-1 bg-gray-400 rounded-full shrink-0"></span>
+                We distribute questions across subjects.
+              </li>
+              <li className="flex items-start gap-2 text-[12px] font-medium text-[#475569] leading-relaxed">
+                <span className="text-gray-400 mt-1.5 w-1 h-1 bg-gray-400 rounded-full shrink-0"></span>
+                You review and confirm the exam.
+              </li>
+              <li className="flex items-start gap-2 text-[12px] font-medium text-[#475569] leading-relaxed">
+                <span className="text-gray-400 mt-1.5 w-1 h-1 bg-gray-400 rounded-full shrink-0"></span>
+                LAT exam is created and ready to use.
+              </li>
+            </ul>
+          </div>
+
+          {/* Note */}
+          <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-6 shadow-sm">
+            <h3 className="flex items-center gap-2 text-[14px] font-bold text-gray-900 mb-3">
+              <Info size={16} className="text-[#2563eb]" /> Note
+            </h3>
+            <ul className="space-y-3">
+              <li className="flex items-start gap-2 text-[12px] font-medium text-[#475569] leading-relaxed">
+                <span className="text-gray-400 mt-1.5 w-1 h-1 bg-gray-400 rounded-full shrink-0"></span>
+                All settings in Auto Configuration are based on NEP 2020 stages and LAT guidelines.
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+      </div>
+      </div>
+
+      {/* Fixed Footer */}
+      <div className="fixed bottom-0 left-0 right-0 md:left-[260px] bg-white border-t border-[#e2e8f0] px-5 py-4 z-40">
+        <div className="max-w-[1200px] mx-auto flex items-center justify-end gap-4">
+          <button className="px-4 md:px-6 py-2.5 bg-white border border-[#e2e8f0] text-gray-900 font-bold text-[13px] rounded-xl hover:bg-gray-50 transition-colors">
+            Save Draft
+          </button>
+          
+          <button className="px-4 md:px-6 py-2.5 bg-[#2563eb] hover:bg-blue-700 text-white font-bold text-[13px] rounded-xl shadow-sm transition-colors flex items-center gap-2">
+            <span className="hidden sm:inline">Next: Question Distribution</span>
+            <span className="sm:hidden">Next</span>
+            <span className="text-lg leading-none">→</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  );
+}

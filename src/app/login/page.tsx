@@ -24,7 +24,7 @@ export default function LoginPage() {
       const { access_token, refresh_token, user } = res.data;
       
       const roles = user.roles || [];
-      if (!roles.some((role: string) => ['SUPER_ADMIN', 'TEACHER', 'SCHOOL_ADMIN'].includes(role))) {
+      if (!roles.some((role: string) => ['SUPER_ADMIN', 'TEACHER', 'SCHOOL_ADMIN', 'SME'].includes(role))) {
         setError('Access denied. This portal is for staff and administrators only.');
         setLoading(false);
         return;
@@ -34,7 +34,7 @@ export default function LoginPage() {
       localStorage.setItem('refresh_token', refresh_token);
       localStorage.setItem('user', JSON.stringify(user));
 
-      if (roles.includes('SUPER_ADMIN')) {
+      if (roles.includes('SUPER_ADMIN') || roles.includes('SME')) {
         router.push('/super-admin/dashboard');
       } else {
         router.push('/teacher/students');
