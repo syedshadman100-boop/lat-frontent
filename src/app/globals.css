@@ -60,7 +60,7 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1);
+  background: transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
