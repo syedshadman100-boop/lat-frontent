@@ -7,6 +7,7 @@ import apiClient from '@/lib/api-client';
 export default function ReviewQuestionsPage() {
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<any | null>(null);
 
   const fetchPendingQuestions = async () => {
@@ -53,10 +54,10 @@ export default function ReviewQuestionsPage() {
       {/* Left Column: List */}
       <div className="w-1/2 flex flex-col gap-4">
         <div className="mb-4">
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <FileQuestion size={24} className="text-indigo-600" /> Question Review
-          </h1>
-          <p className="text-sm font-medium text-gray-500 mt-1">Review AI generated questions before they are published to the bank.</p>
+          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Final Question Review</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Super Admin: Review SME-approved AI questions before publishing them to the live question bank.
+          </p>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
@@ -99,7 +100,7 @@ export default function ReviewQuestionsPage() {
                   <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                     q.aiValidationStatus === 'sme_approved' ? 'bg-blue-50 text-blue-700' : 'bg-yellow-50 text-yellow-700'
                   }`}>
-                    {q.aiValidationStatus === 'sme_approved' ? 'SME Approved' : 'Awaiting SME'}
+                    {q.aiValidationStatus === 'sme_approved' ? 'Super Admin Review' : 'SME Pending'}
                   </span>
                 </div>
                 
@@ -193,13 +194,14 @@ export default function ReviewQuestionsPage() {
                 onClick={() => handleUpdateStatus(selectedQuestion.id, 'rejected')}
                 className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-sm font-bold transition-colors"
               >
-                <X size={18} strokeWidth={2.5} /> SME Reject
+                <X size={18} strokeWidth={2.5} /> Reject Question
               </button>
-              <button 
+              <button
                 onClick={() => handleUpdateStatus(selectedQuestion.id, 'approved')}
-                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-all shadow-[0_4px_12px_rgba(16,185,129,0.25)]"
+                disabled={isUpdating}
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[#1e40af] text-white text-[13px] font-bold rounded-xl shadow-[0_4px_12px_rgba(30,64,175,0.25)] hover:bg-[#1e3a8a] hover:shadow-[0_6px_16px_rgba(30,64,175,0.3)] transition-all disabled:opacity-50"
               >
-                <Check size={18} strokeWidth={2.5} /> SME Approve
+                <Check size={18} strokeWidth={2.5} /> {isUpdating ? 'Publishing...' : 'Publish Question'}
               </button>
             </div>
           </div>
