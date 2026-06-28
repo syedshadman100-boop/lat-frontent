@@ -10,7 +10,7 @@ const MENU_GROUPS = [
     title: 'MAIN',
     items: [
       { name: 'Dashboard', href: '/super-admin/dashboard', icon: LayoutDashboard },
-      { name: 'Question', href: '/sme/questions', icon: FileQuestion },
+      { name: 'Final Review', href: '/super-admin/questions/review', icon: FileQuestion },
       { name: 'LAT Exam', href: '/super-admin/lat-exams', icon: FileText },
       { name: 'Users management', href: '/super-admin/users', icon: Users },
     ],
