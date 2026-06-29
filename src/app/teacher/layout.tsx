@@ -18,7 +18,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
-    router.push('/teacher-login');
+    router.push('/login');
   };
 
   return (
