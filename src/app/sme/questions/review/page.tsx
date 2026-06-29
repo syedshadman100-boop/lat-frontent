@@ -1,19 +1,23 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { FileQuestion, Check, X, Search, Loader2, ChevronDown, ChevronRight, Filter, AlertTriangle, Target, Brain, BookOpen, BarChart3, ThumbsUp, ThumbsDown, Lightbulb } from 'lucide-react';
+import React, { Suspense, useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { FileQuestion, Check, X, Search, Loader2, ChevronDown, ChevronRight, Filter, AlertTriangle, Target, Brain, BookOpen, BarChart3, ThumbsUp, ThumbsDown, Lightbulb, Sparkles } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 
-export default function ReviewQuestionsPage() {
+function ReviewQuestionsContent() {
+  const searchParams = useSearchParams();
+  const jobId = searchParams.get('jobId');
+
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedQuestion, setSelectedQuestion] = useState<any | null>(null);
   const [showReport, setShowReport] = useState(true);
 
-  const fetchPendingQuestions = async () => {
+  const fetchQuestions = async () => {
     setLoading(true);
     try {
-      let targetStatus = 'pending';
+      let targetStatus = 'pending,sme_approved,rejected';
       const userStr = localStorage.getItem('user');
       if (userStr) {
         const user = JSON.parse(userStr);
@@ -22,7 +26,8 @@ export default function ReviewQuestionsPage() {
           targetStatus = 'sme_approved,sme_rejected';
         }
       }
-      const res = await apiClient.get(`/questions?status=${targetStatus}&limit=50`);
+      const url = `/questions?status=${targetStatus}&limit=50`;
+      const res = await apiClient.get(url);
       setQuestions(res.data.data);
     } catch (err) {
       console.error('Failed to fetch questions', err);
@@ -32,8 +37,15 @@ export default function ReviewQuestionsPage() {
   };
 
   useEffect(() => {
-    fetchPendingQuestions();
-  }, []);
+    fetchQuestions();
+  }, [jobId]);
+
+  // Auto-select first question when jobId is present
+  useEffect(() => {
+    if (!loading && questions.length > 0 && jobId && !selectedQuestion) {
+      setSelectedQuestion(questions[0]);
+    }
+  }, [loading, questions, jobId, selectedQuestion]);
 
   const handleUpdateStatus = async (id: string, status: 'approved' | 'rejected') => {
     try {
@@ -87,6 +99,18 @@ export default function ReviewQuestionsPage() {
 
       {/* Left Column: List */}
       <div className="w-1/2 flex flex-col gap-4">
+        {jobId && !loading && questions.length > 0 && (
+          <div className="mb-4 p-4 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center shrink-0">
+              <Sparkles size={16} className="text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-indigo-800">New Questions Ready for Review</h3>
+              <p className="text-xs font-medium text-indigo-600">{questions.length} question{questions.length !== 1 ? 's' : ''} generated and awaiting your SME review.</p>
+            </div>
+          </div>
+        )}
+
         <div className="mb-4">
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <FileQuestion size={24} className="text-indigo-600" /> Question Review
@@ -337,5 +361,20 @@ export default function ReviewQuestionsPage() {
       </div>
 
     </div>
+  );
+}
+
+export default function ReviewQuestionsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen p-8 flex items-center justify-center bg-[#f4f7fb]">
+        <div className="flex flex-col items-center text-gray-400">
+          <Loader2 size={32} className="animate-spin mb-4 text-indigo-500" />
+          <p className="text-sm font-medium">Loading...</p>
+        </div>
+      </div>
+    }>
+      <ReviewQuestionsContent />
+    </Suspense>
   );
 }

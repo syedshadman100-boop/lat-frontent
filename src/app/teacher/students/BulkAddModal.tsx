@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { X, Download, CloudUpload, FileSpreadsheet } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import apiClient from '@/lib/api-client';
 
 interface BulkAddModalProps {
   isOpen: boolean;
@@ -10,6 +12,11 @@ export default function BulkAddModal({ isOpen, onClose }: BulkAddModalProps) {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [dragActive, setDragActive] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
@@ -28,8 +35,61 @@ export default function BulkAddModal({ isOpen, onClose }: BulkAddModalProps) {
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      // Handle file drop
-      console.log('File dropped:', e.dataTransfer.files[0].name);
+      setFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!file) {
+      setError('Please upload a CSV file first.');
+      return;
+    }
+    if (!selectedClass || !selectedSection) {
+      setError('Please select a Class and Section.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('gradeId', selectedClass);
+      formData.append('section', selectedSection);
+
+      const response = await apiClient.post('/users/upload-students', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data.failedCount > 0) {
+        setError(`Uploaded ${response.data.successCount}. Failed ${response.data.failedCount}. Example error: ${response.data.failures[0].error}`);
+        if (response.data.successCount > 0) {
+          setTimeout(() => {
+            setFile(null);
+            onClose();
+          }, 4000);
+        }
+      } else {
+        setSuccess(`Successfully uploaded ${response.data.successCount} students.`);
+        setTimeout(() => {
+          setFile(null);
+          onClose();
+        }, 2000);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'Failed to process file.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -59,6 +119,9 @@ export default function BulkAddModal({ isOpen, onClose }: BulkAddModalProps) {
         <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-gray-50/30">
           <div className="space-y-6">
             
+            {error && <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm border border-red-100">{error}</div>}
+            {success && <div className="p-3 bg-green-50 text-green-600 rounded-lg text-sm border border-green-100">{success}</div>}
+            
             {/* Step 1 */}
             <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
               <div className="flex items-start gap-4">
@@ -79,10 +142,10 @@ export default function BulkAddModal({ isOpen, onClose }: BulkAddModalProps) {
                         <p className="text-xs text-gray-500">12 KB</p>
                       </div>
                     </div>
-                    <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                    <a href="/Student_Template.xlsx" download="Student_Template.xlsx" className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
                       <Download size={16} />
                       Download
-                    </button>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -141,26 +204,33 @@ export default function BulkAddModal({ isOpen, onClose }: BulkAddModalProps) {
                   <p className="text-sm text-gray-500 mb-4">Fill the details in downloaded template and upload it here.</p>
                   
                   <div 
-                    className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+                    className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
                       dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400 bg-gray-50/50'
                     }`}
                     onDragEnter={handleDrag}
                     onDragLeave={handleDrag}
                     onDragOver={handleDrag}
                     onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
                   >
                     <div className="flex justify-center mb-3">
                       <div className="p-3 bg-white rounded-full shadow-sm border border-gray-100">
-                        <CloudUpload size={28} className="text-blue-500" />
+                        <CloudUpload size={28} className={file ? "text-green-500" : "text-blue-500"} />
                       </div>
                     </div>
                     <p className="text-sm text-gray-900 font-medium mb-1">
-                      Click to choose file or drag & drop
+                      {file ? file.name : 'Click to choose file or drag & drop'}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Supported: .xlsx | Max size: 5 MB
+                      Supported: .csv, .xlsx | Max size: 5 MB
                     </p>
-                    <input type="file" className="hidden" accept=".xlsx, .xls" />
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept=".csv, .xlsx, .xls"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                    />
                   </div>
                 </div>
               </div>
@@ -177,8 +247,12 @@ export default function BulkAddModal({ isOpen, onClose }: BulkAddModalProps) {
           >
             Cancel
           </button>
-          <button className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm">
-            Save
+          <button 
+            onClick={handleSave}
+            disabled={loading}
+            className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm disabled:opacity-50"
+          >
+            {loading ? 'Saving...' : 'Save'}
           </button>
         </div>
 

@@ -24,16 +24,22 @@ export default function LoginPage() {
   useEffect(() => {
     let stream: MediaStream | null = null;
     if (step === 2 && !photoCaptured) {
-      navigator.mediaDevices.getUserMedia({ video: true })
-        .then((s) => {
-          stream = s;
-          if (videoRef.current) {
-            videoRef.current.srcObject = s;
-          }
-        })
-        .catch((err) => {
-          console.error("Error accessing camera:", err);
-        });
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: true })
+          .then((s) => {
+            stream = s;
+            if (videoRef.current) {
+              videoRef.current.srcObject = s;
+            }
+          })
+          .catch((err) => {
+            console.error("Error accessing camera:", err);
+          });
+      } else {
+        console.warn("Camera API not available (requires HTTPS or localhost). Bypassing photo capture for local dev.");
+        // Provide a dummy 1x1 image base64 to bypass for dev
+        setPhotoCaptured("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=");
+      }
     }
 
     return () => {

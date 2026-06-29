@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, User, GraduationCap, Phone } from 'lucide-react';
+import { X, User, GraduationCap, Phone, Loader2 } from 'lucide-react';
+import apiClient from '@/lib/api-client';
 
 interface AddStudentModalProps {
   isOpen: boolean;
@@ -22,15 +23,42 @@ export default function AddStudentModal({ isOpen, onClose }: AddStudentModalProp
 
   if (!isOpen) return null;
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Submitting student:', formData);
-    // TODO: Add actual API call here
-    onClose();
+    setLoading(true);
+    setError('');
+    
+    try {
+      const payload = {
+        firstName: formData.fullName.split(' ')[0],
+        lastName: formData.fullName.split(' ').slice(1).join(' '),
+        email: formData.email || undefined,
+        phone: formData.mobileNumber,
+        rollNo: formData.rollNumber,
+        gender: formData.gender,
+        dob: formData.dob,
+        parentName: formData.fatherName,
+        motherName: formData.motherName,
+        gradeId: parseInt(formData.grade),
+        section: formData.section
+      };
+      
+      await apiClient.post('/users/register-student', payload);
+      onClose();
+      // Optionally reload or show success toast here
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || 'Failed to add student');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -58,6 +86,7 @@ export default function AddStudentModal({ isOpen, onClose }: AddStudentModalProp
         {/* Content */}
         <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-gray-50/30">
           <form id="add-student-form" onSubmit={handleSubmit} className="space-y-8">
+            {error && <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm border border-red-100">{error}</div>}
             
             {/* Personal Information */}
             <div>
@@ -137,11 +166,11 @@ export default function AddStudentModal({ isOpen, onClose }: AddStudentModalProp
                     className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white transition-all text-gray-900"
                   >
                     <option value="">Select Grade</option>
-                    <option value="vi">Grade 6</option>
-                    <option value="vii">Grade 7</option>
-                    <option value="viii">Grade 8</option>
-                    <option value="ix">Grade 9</option>
-                    <option value="x">Grade 10</option>
+                    <option value="6">Grade 6</option>
+                    <option value="7">Grade 7</option>
+                    <option value="8">Grade 8</option>
+                    <option value="9">Grade 9</option>
+                    <option value="10">Grade 10</option>
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -172,11 +201,13 @@ export default function AddStudentModal({ isOpen, onClose }: AddStudentModalProp
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-sm font-medium text-gray-700">Email Address *</label>
+                  <label className="text-sm font-medium text-gray-700 flex justify-between">
+                    <span>Email Address</span>
+                    <span className="text-gray-400 text-xs font-normal">Optional (Generated automatically if left blank)</span>
+                  </label>
                   <input 
                     type="email" 
                     name="email"
-                    required
                     placeholder="Student's email address (used for login)"
                     value={formData.email}
                     onChange={handleChange}
@@ -223,19 +254,22 @@ export default function AddStudentModal({ isOpen, onClose }: AddStudentModalProp
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 bg-white flex justify-end gap-3 sticky bottom-0 z-10">
+        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 sticky bottom-0 z-10">
           <button 
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
+            disabled={loading}
+            className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel
           </button>
           <button 
             type="submit"
             form="add-student-form"
-            className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
+            disabled={loading}
+            className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
           >
+            {loading && <Loader2 size={16} className="animate-spin" />}
             Save Student
           </button>
         </div>

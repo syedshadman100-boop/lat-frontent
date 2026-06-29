@@ -23,61 +23,6 @@ import {
   Check
 } from 'lucide-react';
 
-const generateMockQuestions = (startIndex: number, count: number) => {
-  const mocks = [];
-  for (let i = 0; i < count; i++) {
-    const qIndex = startIndex + i;
-    const type = i % 5;
-
-    let question_text = `Mock Question ${qIndex + 1}: `;
-    let images: string[] | undefined = undefined;
-    let options: any[] = [
-      { option_key: 'A', option_text: 'Option A' },
-      { option_key: 'B', option_text: 'Option B' },
-      { option_key: 'C', option_text: 'Option C' },
-      { option_key: 'D', option_text: 'Option D' }
-    ];
-
-    if (type === 0) {
-      question_text += "This is a standard text-only question to test reading comprehension.";
-    } else if (type === 1) {
-      question_text += "Examine the following diagram carefully.";
-      images = [`https://picsum.photos/seed/${qIndex}a/600/300`];
-    } else if (type === 2) {
-      question_text += "Compare the two images below. What is the key difference?";
-      images = [
-        `https://picsum.photos/seed/${qIndex}a/400/300`,
-        `https://picsum.photos/seed/${qIndex}b/400/300`
-      ];
-    } else if (type === 3) {
-      question_text += "Which of these four regions represents the correct habitat?";
-      images = [
-        `https://picsum.photos/seed/${qIndex}a/400/300`,
-        `https://picsum.photos/seed/${qIndex}b/400/300`,
-        `https://picsum.photos/seed/${qIndex}c/400/300`,
-        `https://picsum.photos/seed/${qIndex}d/400/300`
-      ];
-    } else if (type === 4) {
-      question_text += "Which of the following images correctly depicts the process?";
-      options = [
-        { option_key: 'A', option_text: 'Diagram A', image: `https://picsum.photos/seed/${qIndex}optA/300/200` },
-        { option_key: 'B', option_text: 'Diagram B', image: `https://picsum.photos/seed/${qIndex}optB/300/200` },
-        { option_key: 'C', option_text: 'Diagram C', image: `https://picsum.photos/seed/${qIndex}optC/300/200` },
-        { option_key: 'D', option_text: 'Diagram D', image: `https://picsum.photos/seed/${qIndex}optD/300/200` }
-      ];
-    }
-
-    mocks.push({
-      id: `mock_q_${qIndex}`,
-      question_text,
-      context_text: i % 7 === 0 ? "Review the attached materials before answering." : null,
-      images,
-      options
-    });
-  }
-  return mocks;
-};
-
 export default function StudentExamPage() {
   const router = useRouter();
   const { id: studentExamId } = useParams();
@@ -174,31 +119,68 @@ export default function StudentExamPage() {
   // Countdown timer
   useEffect(() => {
     if (!hasStarted) return;
-    if (remainingTime === null || remainingTime <= 0) {
-      if (remainingTime === 0) {
-        autoSubmitExam();
-      }
-      return;
-    }
-
+    
     const interval = setInterval(() => {
-      setRemainingTime((prev) => (prev !== null ? prev - 1 : null));
+      setRemainingTime((prev) => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          clearInterval(interval);
+          autoSubmitExam();
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [remainingTime, hasStarted]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasStarted]);
 
   const loadExam = async () => {
     try {
       const res = await apiClient.post('/exams/attempt/start', { exam_id: studentExamId });
       setExamData(res.data);
 
-      // Inject 60 dynamic mock questions
-      const realQuestions = res.data.questions || [];
-      const mockQuestions = generateMockQuestions(realQuestions.length, 60);
-      const combinedQuestions = [...realQuestions, ...mockQuestions];
+      let realQuestions = res.data.questions || [];
       
-      setQuestions(combinedQuestions);
+      // Fallback to dummy questions if the backend has none for this exam
+      if (realQuestions.length === 0) {
+        realQuestions = [
+          {
+            id: 'mock-1',
+            question_text: "What is the primary function of photosynthesis in plants?",
+            context_text: "Plants are living organisms that require energy to survive.",
+            options: [
+              { option_key: 'A', option_text: 'To produce oxygen' },
+              { option_key: 'B', option_text: 'To convert solar energy into chemical energy' },
+              { option_key: 'C', option_text: 'To absorb water from the soil' },
+              { option_key: 'D', option_text: 'To release carbon dioxide' }
+            ]
+          },
+          {
+            id: 'mock-2',
+            question_text: "Solve for x: 2x + 5 = 15",
+            options: [
+              { option_key: 'A', option_text: '5' },
+              { option_key: 'B', option_text: '10' },
+              { option_key: 'C', option_text: '20' },
+              { option_key: 'D', option_text: '2.5' }
+            ]
+          },
+          {
+            id: 'mock-3',
+            question_text: "Which of the following is a noble gas?",
+            options: [
+              { option_key: 'A', option_text: 'Oxygen' },
+              { option_key: 'B', option_text: 'Nitrogen' },
+              { option_key: 'C', option_text: 'Argon' },
+              { option_key: 'D', option_text: 'Carbon' }
+            ]
+          }
+        ];
+      }
+
+      setQuestions(realQuestions);
       
       // Calculate remaining duration
       const end = new Date(res.data.end_time).getTime();
@@ -208,7 +190,7 @@ export default function StudentExamPage() {
       // Load existing answers if restarted
       const loadedAnswers: Record<string, string> = {};
       const loadedTime: Record<string, number> = {};
-      combinedQuestions.forEach((q: any) => {
+      realQuestions.forEach((q: any) => {
         if (q.selected_option_key) loadedAnswers[q.id] = q.selected_option_key;
         loadedTime[q.id] = q.time_spent_seconds || 0;
       });
@@ -219,11 +201,7 @@ export default function StudentExamPage() {
       // Scan for unsynced answers in localStorage on start
       checkOfflineStore();
     } catch (err) {
-      console.warn('Failed to load exam from backend. Falling back to dummy data.', err);
-      const mockQuestions = generateMockQuestions(0, 64);
-      setQuestions(mockQuestions);
-      setRemainingTime(3600); // 1 hour
-      setExamData({ title: 'Sample LAT Assessment', duration: 60, total_questions: 64 });
+      console.warn('Failed to load exam from backend.', err);
       setLoading(false);
     }
   };
@@ -490,6 +468,17 @@ export default function StudentExamPage() {
             </div>
           </div>
         </main>
+      </div>
+    );
+  }
+
+  if (!activeQuestion) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f4f7fb] text-slate-800">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-indigo-650 mx-auto" />
+          <span className="text-sm text-slate-500 block font-medium">Preparing questions...</span>
+        </div>
       </div>
     );
   }

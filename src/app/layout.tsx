@@ -22,8 +22,9 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${inter.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col font-sans" style={{ fontFamily: 'var(--font-inter), sans-serif' }}>{children}</body>
+      <body className="min-h-full flex flex-col font-sans" style={{ fontFamily: 'var(--font-inter), sans-serif' }} suppressHydrationWarning>{children}</body>
     </html>
   );
 }

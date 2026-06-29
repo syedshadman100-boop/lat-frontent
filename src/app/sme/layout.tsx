@@ -32,7 +32,7 @@ export default function SmeLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex fixed inset-0 bg-[#f4f7fb] text-gray-900 overflow-hidden font-sans">
+    <div suppressHydrationWarning className="flex fixed inset-0 bg-[#f4f7fb] text-gray-900 overflow-hidden font-sans">
       
       {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
@@ -142,6 +142,7 @@ export default function SmeLayout({ children }: { children: React.ReactNode }) {
               onClick={handleLogout}
               className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors ml-2 flex items-center gap-2"
               title="Sign Out"
+              suppressHydrationWarning
             >
               <LogOut size={18} />
               <span className="text-sm font-bold hidden sm:block">Sign Out</span>
