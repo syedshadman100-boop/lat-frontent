@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileQuestion, Check, X, Search, Loader2, ChevronDown, ChevronRight, Filter, AlertTriangle } from 'lucide-react';
+import { FileQuestion, Check, X, Search, Loader2, ChevronDown, ChevronRight, Filter, AlertTriangle, Target, Brain, BookOpen, BarChart3, ThumbsUp, ThumbsDown, Lightbulb } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 
 export default function ReviewQuestionsPage() {
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedQuestion, setSelectedQuestion] = useState<any | null>(null);
+  const [showReport, setShowReport] = useState(true);
 
   const fetchPendingQuestions = async () => {
     setLoading(true);
@@ -18,7 +19,7 @@ export default function ReviewQuestionsPage() {
         const user = JSON.parse(userStr);
         const roleNames = user.roles || [];
         if (roleNames.includes('SUPER_ADMIN')) {
-          targetStatus = 'sme_approved';
+          targetStatus = 'sme_approved,sme_rejected';
         }
       }
       const res = await apiClient.get(`/questions?status=${targetStatus}&limit=50`);
@@ -37,7 +38,6 @@ export default function ReviewQuestionsPage() {
   const handleUpdateStatus = async (id: string, status: 'approved' | 'rejected') => {
     try {
       await apiClient.patch(`/questions/${id}/status`, { status });
-      // Remove from list
       setQuestions((prev) => prev.filter((q) => q.id !== id));
       if (selectedQuestion?.id === id) {
         setSelectedQuestion(null);
@@ -47,9 +47,44 @@ export default function ReviewQuestionsPage() {
     }
   };
 
+  const scoreColor = (score: number | null | undefined) => {
+    if (score == null) return 'text-gray-400';
+    if (score >= 80) return 'text-emerald-600';
+    if (score >= 60) return 'text-amber-600';
+    return 'text-red-500';
+  };
+
+  const scoreBg = (score: number | null | undefined) => {
+    if (score == null) return 'bg-gray-50';
+    if (score >= 80) return 'bg-emerald-50';
+    if (score >= 60) return 'bg-amber-50';
+    return 'bg-red-50';
+  };
+
+  const rejectionReasonBadge = (reason: string | null | undefined) => {
+    if (!reason) return null;
+    const colors: Record<string, string> = {
+      weak_distractors: 'bg-orange-100 text-orange-800',
+      misaligned_bloom: 'bg-purple-100 text-purple-800',
+      not_competency_based: 'bg-red-100 text-red-800',
+      duplicate: 'bg-gray-100 text-gray-800',
+      language_quality: 'bg-yellow-100 text-yellow-800',
+      conceptual_error: 'bg-rose-100 text-rose-800',
+      not_age_appropriate: 'bg-blue-100 text-blue-800',
+      poor_scenario: 'bg-indigo-100 text-indigo-800',
+      misaligned_difficulty: 'bg-teal-100 text-teal-800',
+      formatting_issue: 'bg-slate-100 text-slate-800',
+    };
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${colors[reason] || 'bg-gray-100 text-gray-800'}`}>
+        {reason.replace(/_/g, ' ')}
+      </span>
+    );
+  };
+
   return (
     <div className="min-h-screen p-8 text-gray-900 font-sans max-w-[1400px] mx-auto bg-[#f4f7fb] flex gap-6">
-      
+
       {/* Left Column: List */}
       <div className="w-1/2 flex flex-col gap-4">
         <div className="mb-4">
@@ -62,9 +97,9 @@ export default function ReviewQuestionsPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Search questions..." 
+            <input
+              type="text"
+              placeholder="Search questions..."
               className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all"
             />
           </div>
@@ -87,8 +122,8 @@ export default function ReviewQuestionsPage() {
             </div>
           ) : (
             questions.map((q) => (
-              <div 
-                key={q.id} 
+              <div
+                key={q.id}
                 onClick={() => setSelectedQuestion(q)}
                 className={`p-4 rounded-2xl border cursor-pointer transition-all ${selectedQuestion?.id === q.id ? 'bg-indigo-50 border-indigo-200 shadow-sm' : 'bg-white border-gray-100 hover:border-indigo-100 hover:shadow-sm'}`}
               >
@@ -97,16 +132,25 @@ export default function ReviewQuestionsPage() {
                     {q.questionText}
                   </p>
                   <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                    q.aiValidationStatus === 'sme_approved' ? 'bg-blue-50 text-blue-700' : 'bg-yellow-50 text-yellow-700'
+                    q.aiValidationStatus === 'sme_approved' ? 'bg-blue-50 text-blue-700' :
+                    q.aiValidationStatus === 'rejected' ? 'bg-red-50 text-red-700' :
+                    'bg-yellow-50 text-yellow-700'
                   }`}>
-                    {q.aiValidationStatus === 'sme_approved' ? 'SME Approved' : 'Awaiting SME'}
+                    {q.aiValidationStatus === 'sme_approved' ? 'SME Approved' :
+                     q.aiValidationStatus === 'rejected' ? 'Rejected' :
+                     'Awaiting SME'}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center gap-3 text-[11px] font-bold text-gray-500">
                   <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100"><ChevronRight size={12} className="text-indigo-400"/> {q.subject?.name || 'Subject'}</span>
-                  <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">Grade {q.gradeLevel}</span>
+                  <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">Grade {q.assessmentGrade || q.gradeLevel}</span>
                   <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100 capitalize text-indigo-600">{q.bloomTaxonomy}</span>
+                  {q.qualityScore != null && (
+                    <span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold ${q.qualityScore >= 70 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                      Score: {q.qualityScore}
+                    </span>
+                  )}
                 </div>
               </div>
             ))
@@ -121,14 +165,21 @@ export default function ReviewQuestionsPage() {
             <div className="p-6 border-b border-gray-100 bg-[#fafcff]">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Question Details</h3>
-                <span className="inline-flex px-2 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-lg uppercase tracking-wider">
-                  {selectedQuestion.questionType.replace('_', ' ')}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex px-2 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-lg uppercase tracking-wider">
+                    {selectedQuestion.questionType?.replace('_', ' ')}
+                  </span>
+                  {selectedQuestion.aiValidationStatus === 'rejected' && selectedQuestion.overallReviewResult === 'rejected' && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 text-[10px] font-bold rounded-lg uppercase tracking-wider">
+                      <ThumbsDown size={12} /> Rejected
+                    </span>
+                  )}
+                </div>
               </div>
               <p className="text-lg font-bold text-gray-900 leading-relaxed mb-6">
                 {selectedQuestion.questionText}
               </p>
-              
+
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Difficulty</p>
@@ -148,17 +199,90 @@ export default function ReviewQuestionsPage() {
             </div>
 
             <div className="p-6 flex-1 overflow-y-auto">
-              {selectedQuestion.aiReviewerFeedback && (
-                <div className="mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
-                  <h4 className="text-xs font-bold text-indigo-800 uppercase tracking-widest mb-2 flex items-center gap-2">
-                    <Check size={14} /> AI Reviewer Feedback
+              {/* AI Agent 2 SME Report Section */}
+              <div className="mb-6">
+                <button
+                  onClick={() => setShowReport(!showReport)}
+                  className="w-full flex items-center justify-between p-3 bg-indigo-50 border border-indigo-100 rounded-xl hover:bg-indigo-100/50 transition-colors"
+                >
+                  <h4 className="text-xs font-bold text-indigo-800 uppercase tracking-widest flex items-center gap-2">
+                    <Target size={14} /> AI Agent 2 SME Report
                   </h4>
-                  <p className="text-sm font-medium text-indigo-900 leading-relaxed">
-                    {selectedQuestion.aiReviewerFeedback}
-                  </p>
-                </div>
-              )}
+                  {showReport ? <ChevronDown size={16} className="text-indigo-400" /> : <ChevronRight size={16} className="text-indigo-400" />}
+                </button>
 
+                {showReport && (
+                  <div className="mt-3 space-y-3">
+                    {/* Overall Result Banner */}
+                    {selectedQuestion.overallReviewResult && (
+                      <div className={`p-3 rounded-xl flex items-center gap-3 ${selectedQuestion.overallReviewResult === 'approved' ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
+                        {selectedQuestion.overallReviewResult === 'approved' ? (
+                          <ThumbsUp size={20} className="text-emerald-600" />
+                        ) : (
+                          <ThumbsDown size={20} className="text-red-600" />
+                        )}
+                        <div>
+                          <p className="text-sm font-bold text-gray-800 capitalize">Overall: {selectedQuestion.overallReviewResult}</p>
+                          {selectedQuestion.overallReviewResult === 'rejected' && selectedQuestion.aiReviewerFeedback && (
+                            <p className="text-xs font-medium text-gray-600 mt-0.5">{selectedQuestion.aiReviewerFeedback}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Granular Scores */}
+                    <div className="p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
+                      <h4 className="text-xs font-bold text-gray-800 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <BarChart3 size={14} className="text-indigo-500" /> Granular Scoring
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {[
+                          { label: 'Quality', key: 'qualityScore', icon: Brain },
+                          { label: 'Confidence', key: 'confidenceScore', icon: Target },
+                          { label: 'Competency Match', key: 'competencyMatchScore', icon: BookOpen },
+                          { label: 'Bloom Match', key: 'bloomMatchScore', icon: BarChart3 },
+                          { label: 'Difficulty Match', key: 'difficultyMatchScore', icon: FileQuestion },
+                          { label: 'Language Quality', key: 'languageQualityScore', icon: Lightbulb },
+                        ].map(({ label, key, icon: Icon }) => {
+                          const score = selectedQuestion[key];
+                          return (
+                            <div key={key} className={`text-center p-2 rounded-lg ${scoreBg(score)}`}>
+                              <Icon size={14} className="mx-auto mb-1 text-gray-400" />
+                              <p className="text-[10px] font-bold text-gray-400 uppercase">{label}</p>
+                              <p className={`text-lg font-bold ${scoreColor(score)}`}>{score != null ? score : '--'}/100</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* AI Reviewer Feedback (structured) */}
+                    {selectedQuestion.aiReviewerFeedback && (
+                      <div className="p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
+                        <h4 className="text-xs font-bold text-gray-800 uppercase tracking-widest mb-2 flex items-center gap-2">
+                          <FileQuestion size={14} className="text-indigo-500" /> Reviewer Notes
+                        </h4>
+                        <p className="text-sm font-medium text-gray-700 leading-relaxed">
+                          {selectedQuestion.aiReviewerFeedback}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Duplicate Similarity Warning */}
+                    {selectedQuestion.duplicateSimilarityScore != null && selectedQuestion.duplicateSimilarityScore > 70 && (
+                      <div className="p-3 bg-orange-50 border border-orange-200 rounded-xl flex items-start gap-3">
+                        <AlertTriangle size={16} className="text-orange-600 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-xs font-bold text-orange-800">Potential Duplicate</p>
+                          <p className="text-xs font-medium text-orange-700">Similarity score: {selectedQuestion.duplicateSimilarityScore}%</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Options & Distractors */}
               <h4 className="text-xs font-bold text-gray-800 uppercase tracking-widest mb-4">Options & Distractors</h4>
               <div className="space-y-3">
                 {selectedQuestion.options?.map((opt: any, index: number) => (
@@ -189,13 +313,13 @@ export default function ReviewQuestionsPage() {
             </div>
 
             <div className="p-5 border-t border-gray-100 bg-white flex items-center gap-3">
-              <button 
+              <button
                 onClick={() => handleUpdateStatus(selectedQuestion.id, 'rejected')}
                 className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-sm font-bold transition-colors"
               >
                 <X size={18} strokeWidth={2.5} /> SME Reject
               </button>
-              <button 
+              <button
                 onClick={() => handleUpdateStatus(selectedQuestion.id, 'approved')}
                 className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-all shadow-[0_4px_12px_rgba(16,185,129,0.25)]"
               >
@@ -207,7 +331,7 @@ export default function ReviewQuestionsPage() {
           <div className="h-full bg-white rounded-3xl border border-gray-100 border-dashed flex flex-col items-center justify-center text-gray-400 p-8 text-center">
             <FileQuestion size={48} className="mb-4 text-gray-200" strokeWidth={1} />
             <p className="text-sm font-bold text-gray-500 mb-1">Select a question to review</p>
-            <p className="text-xs font-medium text-gray-400">Click any question from the list on the left to see its full details, options, and distractors.</p>
+            <p className="text-xs font-medium text-gray-400">Click any question from the list on the left to see its full details, AI Agent 2 SME report, options, and distractors.</p>
           </div>
         )}
       </div>

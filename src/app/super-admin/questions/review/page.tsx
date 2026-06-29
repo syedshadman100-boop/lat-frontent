@@ -1,28 +1,22 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileQuestion, Check, X, Search, Loader2, ChevronDown, ChevronRight, Filter, AlertTriangle } from 'lucide-react';
+import { FileQuestion, Check, X, Search, Loader2, ChevronDown, ChevronRight, Filter, AlertTriangle, Target, Brain, BookOpen, BarChart3, ThumbsUp, ThumbsDown, Lightbulb, Send } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 
-export default function ReviewQuestionsPage() {
+export default function FinalReviewPage() {
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<any | null>(null);
+  const [showReport, setShowReport] = useState(true);
+  const [showRejectInput, setShowRejectInput] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
 
-  const fetchPendingQuestions = async () => {
+  const fetchQuestions = async () => {
     setLoading(true);
     try {
-      let targetStatus = 'pending';
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        const roleNames = user.roles || [];
-        if (roleNames.includes('SUPER_ADMIN')) {
-          targetStatus = 'sme_approved';
-        }
-      }
-      const res = await apiClient.get(`/questions?status=${targetStatus}&limit=50`);
+      const res = await apiClient.get('/questions?status=sme_approved,sme_rejected&limit=50');
       setQuestions(res.data.data);
     } catch (err) {
       console.error('Failed to fetch questions', err);
@@ -32,25 +26,60 @@ export default function ReviewQuestionsPage() {
   };
 
   useEffect(() => {
-    fetchPendingQuestions();
+    fetchQuestions();
   }, []);
 
-  const handleUpdateStatus = async (id: string, status: 'approved' | 'rejected') => {
+  const handlePublish = async (id: string) => {
+    setIsUpdating(true);
     try {
-      await apiClient.patch(`/questions/${id}/status`, { status });
-      // Remove from list
+      await apiClient.post(`/questions/${id}/publish`, { action: 'publish' });
+      setQuestions((prev) => prev.filter((q) => q.id !== id));
+      if (selectedQuestion?.id === id) setSelectedQuestion(null);
+    } catch (err) {
+      console.error('Failed to publish question', err);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    if (!rejectReason && showRejectInput) return;
+    setIsUpdating(true);
+    try {
+      await apiClient.post(`/questions/${id}/publish`, {
+        action: 'reject',
+        rejectReason: rejectReason || 'admin_override',
+      });
       setQuestions((prev) => prev.filter((q) => q.id !== id));
       if (selectedQuestion?.id === id) {
         setSelectedQuestion(null);
+        setShowRejectInput(false);
+        setRejectReason('');
       }
     } catch (err) {
-      console.error(`Failed to update status to ${status}`, err);
+      console.error('Failed to reject question', err);
+    } finally {
+      setIsUpdating(false);
     }
+  };
+
+  const scoreColor = (score: number | null | undefined) => {
+    if (score == null) return 'text-gray-400';
+    if (score >= 80) return 'text-emerald-600';
+    if (score >= 60) return 'text-amber-600';
+    return 'text-red-500';
+  };
+
+  const scoreBg = (score: number | null | undefined) => {
+    if (score == null) return 'bg-gray-50';
+    if (score >= 80) return 'bg-emerald-50';
+    if (score >= 60) return 'bg-amber-50';
+    return 'bg-red-50';
   };
 
   return (
     <div className="min-h-screen p-8 text-gray-900 font-sans max-w-[1400px] mx-auto bg-[#f4f7fb] flex gap-6">
-      
+
       {/* Left Column: List */}
       <div className="w-1/2 flex flex-col gap-4">
         <div className="mb-4">
@@ -63,9 +92,9 @@ export default function ReviewQuestionsPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Search questions..." 
+            <input
+              type="text"
+              placeholder="Search questions..."
               className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all"
             />
           </div>
@@ -78,19 +107,19 @@ export default function ReviewQuestionsPage() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <Loader2 size={32} className="animate-spin mb-4 text-indigo-500" />
-              <p className="text-sm font-medium">Loading pending questions...</p>
+              <p className="text-sm font-medium">Loading questions...</p>
             </div>
           ) : questions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-gray-100 border-dashed">
               <Check size={48} className="text-emerald-400 mb-4" />
               <h3 className="text-lg font-bold text-gray-800">All Caught Up!</h3>
-              <p className="text-sm font-medium text-gray-500">There are no pending questions to review.</p>
+              <p className="text-sm font-medium text-gray-500">All SME-reviewed questions have been processed.</p>
             </div>
           ) : (
             questions.map((q) => (
-              <div 
-                key={q.id} 
-                onClick={() => setSelectedQuestion(q)}
+              <div
+                key={q.id}
+                onClick={() => { setSelectedQuestion(q); setShowRejectInput(false); setRejectReason(''); }}
                 className={`p-4 rounded-2xl border cursor-pointer transition-all ${selectedQuestion?.id === q.id ? 'bg-indigo-50 border-indigo-200 shadow-sm' : 'bg-white border-gray-100 hover:border-indigo-100 hover:shadow-sm'}`}
               >
                 <div className="flex items-start justify-between gap-4 mb-3">
@@ -98,16 +127,25 @@ export default function ReviewQuestionsPage() {
                     {q.questionText}
                   </p>
                   <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                    q.aiValidationStatus === 'sme_approved' ? 'bg-blue-50 text-blue-700' : 'bg-yellow-50 text-yellow-700'
+                    q.aiValidationStatus === 'sme_approved' ? 'bg-blue-50 text-blue-700' :
+                    q.aiValidationStatus === 'sme_rejected' ? 'bg-red-50 text-red-700' :
+                    'bg-yellow-50 text-yellow-700'
                   }`}>
-                    {q.aiValidationStatus === 'sme_approved' ? 'Super Admin Review' : 'SME Pending'}
+                    {q.aiValidationStatus === 'sme_approved' ? 'SME Approved' :
+                     q.aiValidationStatus === 'sme_rejected' ? 'SME Rejected' :
+                     'Pending'}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center gap-3 text-[11px] font-bold text-gray-500">
                   <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100"><ChevronRight size={12} className="text-indigo-400"/> {q.subject?.name || 'Subject'}</span>
-                  <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">Grade {q.gradeLevel}</span>
+                  <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">Grade {q.assessmentGrade || q.gradeLevel}</span>
                   <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100 capitalize text-indigo-600">{q.bloomTaxonomy}</span>
+                  {q.qualityScore != null && (
+                    <span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold ${q.qualityScore >= 70 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                      Score: {q.qualityScore}
+                    </span>
+                  )}
                 </div>
               </div>
             ))
@@ -115,21 +153,33 @@ export default function ReviewQuestionsPage() {
         </div>
       </div>
 
-      {/* Right Column: Detail View */}
+      {/* Right Column: Detail View with SME Report Side-by-Side */}
       <div className="w-1/2 flex flex-col h-[calc(100vh-6rem)] sticky top-8">
         {selectedQuestion ? (
           <div className="bg-white rounded-3xl border border-gray-100 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.1)] flex flex-col h-full overflow-hidden">
             <div className="p-6 border-b border-gray-100 bg-[#fafcff]">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Question Details</h3>
-                <span className="inline-flex px-2 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-lg uppercase tracking-wider">
-                  {selectedQuestion.questionType.replace('_', ' ')}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex px-2 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-lg uppercase tracking-wider">
+                    {selectedQuestion.questionType?.replace('_', ' ')}
+                  </span>
+                  {selectedQuestion.aiValidationStatus === 'sme_rejected' && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 text-[10px] font-bold rounded-lg uppercase tracking-wider">
+                      <ThumbsDown size={12} /> SME Rejected
+                    </span>
+                  )}
+                  {selectedQuestion.aiValidationStatus === 'sme_approved' && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-lg uppercase tracking-wider">
+                      <ThumbsUp size={12} /> SME Approved
+                    </span>
+                  )}
+                </div>
               </div>
               <p className="text-lg font-bold text-gray-900 leading-relaxed mb-6">
                 {selectedQuestion.questionText}
               </p>
-              
+
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Difficulty</p>
@@ -149,17 +199,78 @@ export default function ReviewQuestionsPage() {
             </div>
 
             <div className="p-6 flex-1 overflow-y-auto">
-              {selectedQuestion.aiReviewerFeedback && (
-                <div className="mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
-                  <h4 className="text-xs font-bold text-indigo-800 uppercase tracking-widest mb-2 flex items-center gap-2">
-                    <Check size={14} /> AI Reviewer Feedback
+              {/* AI Agent 2 SME Report */}
+              <div className="mb-6">
+                <button
+                  onClick={() => setShowReport(!showReport)}
+                  className="w-full flex items-center justify-between p-3 bg-indigo-50 border border-indigo-100 rounded-xl hover:bg-indigo-100/50 transition-colors"
+                >
+                  <h4 className="text-xs font-bold text-indigo-800 uppercase tracking-widest flex items-center gap-2">
+                    <Target size={14} /> AI Agent 2 SME Report
                   </h4>
-                  <p className="text-sm font-medium text-indigo-900 leading-relaxed">
-                    {selectedQuestion.aiReviewerFeedback}
-                  </p>
-                </div>
-              )}
+                  {showReport ? <ChevronDown size={16} className="text-indigo-400" /> : <ChevronRight size={16} className="text-indigo-400" />}
+                </button>
 
+                {showReport && (
+                  <div className="mt-3 space-y-3">
+                    {/* Overall Result Banner */}
+                    {selectedQuestion.overallReviewResult && (
+                      <div className={`p-3 rounded-xl flex items-center gap-3 ${selectedQuestion.overallReviewResult === 'approved' ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
+                        {selectedQuestion.overallReviewResult === 'approved' ? (
+                          <ThumbsUp size={20} className="text-emerald-600" />
+                        ) : (
+                          <ThumbsDown size={20} className="text-red-600" />
+                        )}
+                        <div>
+                          <p className="text-sm font-bold text-gray-800 capitalize">AI SME Overall: {selectedQuestion.overallReviewResult}</p>
+                          {selectedQuestion.aiReviewerFeedback && (
+                            <p className="text-xs font-medium text-gray-600 mt-0.5">{selectedQuestion.aiReviewerFeedback}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Granular Scores */}
+                    <div className="p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
+                      <h4 className="text-xs font-bold text-gray-800 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <BarChart3 size={14} className="text-indigo-500" /> AI SME Granular Scoring
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {[
+                          { label: 'Quality', key: 'qualityScore', icon: Brain },
+                          { label: 'Confidence', key: 'confidenceScore', icon: Target },
+                          { label: 'Competency Match', key: 'competencyMatchScore', icon: BookOpen },
+                          { label: 'Bloom Match', key: 'bloomMatchScore', icon: BarChart3 },
+                          { label: 'Difficulty Match', key: 'difficultyMatchScore', icon: FileQuestion },
+                          { label: 'Language Quality', key: 'languageQualityScore', icon: Lightbulb },
+                        ].map(({ label, key, icon: Icon }) => {
+                          const score = selectedQuestion[key];
+                          return (
+                            <div key={key} className={`text-center p-2 rounded-lg ${scoreBg(score)}`}>
+                              <Icon size={14} className="mx-auto mb-1 text-gray-400" />
+                              <p className="text-[10px] font-bold text-gray-400 uppercase">{label}</p>
+                              <p className={`text-lg font-bold ${scoreColor(score)}`}>{score != null ? score : '--'}/100</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Duplicate Warning */}
+                    {selectedQuestion.duplicateSimilarityScore != null && selectedQuestion.duplicateSimilarityScore > 70 && (
+                      <div className="p-3 bg-orange-50 border border-orange-200 rounded-xl flex items-start gap-3">
+                        <AlertTriangle size={16} className="text-orange-600 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-xs font-bold text-orange-800">Potential Duplicate</p>
+                          <p className="text-xs font-medium text-orange-700">Similarity score: {selectedQuestion.duplicateSimilarityScore}%</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Options & Distractors */}
               <h4 className="text-xs font-bold text-gray-800 uppercase tracking-widest mb-4">Options & Distractors</h4>
               <div className="space-y-3">
                 {selectedQuestion.options?.map((opt: any, index: number) => (
@@ -189,27 +300,59 @@ export default function ReviewQuestionsPage() {
               </div>
             </div>
 
-            <div className="p-5 border-t border-gray-100 bg-white flex items-center gap-3">
-              <button 
-                onClick={() => handleUpdateStatus(selectedQuestion.id, 'rejected')}
-                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-sm font-bold transition-colors"
-              >
-                <X size={18} strokeWidth={2.5} /> Reject Question
-              </button>
-              <button
-                onClick={() => handleUpdateStatus(selectedQuestion.id, 'approved')}
-                disabled={isUpdating}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[#1e40af] text-white text-[13px] font-bold rounded-xl shadow-[0_4px_12px_rgba(30,64,175,0.25)] hover:bg-[#1e3a8a] hover:shadow-[0_6px_16px_rgba(30,64,175,0.3)] transition-all disabled:opacity-50"
-              >
-                <Check size={18} strokeWidth={2.5} /> {isUpdating ? 'Publishing...' : 'Publish Question'}
-              </button>
+            {/* Actions Footer */}
+            <div className="p-5 border-t border-gray-100 bg-white space-y-3">
+              {showRejectInput ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    placeholder="Enter rejection reason (required)..."
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-100 transition-all resize-none h-20"
+                  />
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => { setShowRejectInput(false); setRejectReason(''); }}
+                      className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-sm font-bold transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleReject(selectedQuestion.id)}
+                      disabled={isUpdating || !rejectReason.trim()}
+                      className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50"
+                    >
+                      {isUpdating ? <Loader2 size={18} className="animate-spin" /> : <X size={18} strokeWidth={2.5} />}
+                      Confirm Reject
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowRejectInput(true)}
+                    disabled={isUpdating}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-sm font-bold transition-colors disabled:opacity-50"
+                  >
+                    <X size={18} strokeWidth={2.5} /> Reject Question
+                  </button>
+                  <button
+                    onClick={() => handlePublish(selectedQuestion.id)}
+                    disabled={isUpdating}
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[#1e40af] text-white text-[13px] font-bold rounded-xl shadow-[0_4px_12px_rgba(30,64,175,0.25)] hover:bg-[#1e3a8a] hover:shadow-[0_6px_16px_rgba(30,64,175,0.3)] transition-all disabled:opacity-50"
+                  >
+                    {isUpdating ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} strokeWidth={2.5} />}
+                    {isUpdating ? 'Publishing...' : 'Publish Question'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ) : (
           <div className="h-full bg-white rounded-3xl border border-gray-100 border-dashed flex flex-col items-center justify-center text-gray-400 p-8 text-center">
             <FileQuestion size={48} className="mb-4 text-gray-200" strokeWidth={1} />
             <p className="text-sm font-bold text-gray-500 mb-1">Select a question to review</p>
-            <p className="text-xs font-medium text-gray-400">Click any question from the list on the left to see its full details, options, and distractors.</p>
+            <p className="text-xs font-medium text-gray-400">Click any question from the list on the left to see its full details, AI Agent 2 SME report, and publish or reject it.</p>
           </div>
         )}
       </div>

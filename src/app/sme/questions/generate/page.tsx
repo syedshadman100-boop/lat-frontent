@@ -16,9 +16,10 @@ export default function GenerateQuestionsPage() {
     subject_id: '1',
     grade_level: '5',
     learning_outcome_id: '1',
+    learning_indicator_id: '',
     bloom_level: 'understanding',
     difficulty: 'medium',
-    question_type: 'mcq',
+    term: '2',
     count: 5,
     llm_provider: 'gemini',
   });
@@ -66,7 +67,9 @@ export default function GenerateQuestionsPage() {
         subject_id: parseInt(formData.subject_id),
         grade_level: parseInt(formData.grade_level),
         learning_outcome_id: parseInt(formData.learning_outcome_id),
+        learning_indicator_id: formData.learning_indicator_id ? parseInt(formData.learning_indicator_id) : undefined,
         count: parseInt(formData.count.toString()),
+        term: formData.term,
       });
       
       const newJobId = res.data.job_id;
@@ -82,6 +85,8 @@ export default function GenerateQuestionsPage() {
       setLoading(false);
     }
   };
+
+  const curriculumGrade = formData.term === '1' ? parseInt(formData.grade_level) - 1 : parseInt(formData.grade_level);
 
   return (
     <div className="min-h-screen p-8 text-gray-900 font-sans max-w-[1200px] mx-auto bg-[#f4f7fb]">
@@ -162,13 +167,17 @@ export default function GenerateQuestionsPage() {
               <div className="relative">
                 <select name="grade_level" value={formData.grade_level} onChange={handleChange} className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm">
                   <option value="3">Grade 3</option>
-                  <option value="4">Grade 4</option>
                   <option value="5">Grade 5</option>
-                  <option value="6">Grade 6</option>
-                  <option value="7">Grade 7</option>
                   <option value="8">Grade 8</option>
                 </select>
                 <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-2 flex items-center gap-2"><GraduationCap size={14} className="text-emerald-500"/> Curriculum Grade (Auto)</label>
+              <div className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-gray-500 cursor-not-allowed">
+                Grade {curriculumGrade}
               </div>
             </div>
 
@@ -179,6 +188,18 @@ export default function GenerateQuestionsPage() {
                 name="learning_outcome_id" 
                 value={formData.learning_outcome_id} 
                 onChange={handleChange}
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-2 flex items-center gap-2"><Target size={14} className="text-purple-500"/> Learning Indicator (ID)</label>
+              <input 
+                type="number" 
+                name="learning_indicator_id" 
+                value={formData.learning_indicator_id} 
+                onChange={handleChange}
+                placeholder="Optional"
                 className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
               />
             </div>
@@ -221,13 +242,11 @@ export default function GenerateQuestionsPage() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Question Type</label>
+              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Term</label>
               <div className="relative">
-                <select name="question_type" value={formData.question_type} onChange={handleChange} className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                  <option value="mcq">Multiple Choice</option>
-                  <option value="scenario_based">Scenario Based</option>
-                  <option value="assertion_reason">Assertion & Reason</option>
-                  <option value="competency_task">Competency Task</option>
+                <select name="term" value={formData.term} onChange={handleChange} className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                  <option value="1">Term 1 (Diagnostic)</option>
+                  <option value="2">Term 2 (Achievement)</option>
                 </select>
                 <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
@@ -237,16 +256,12 @@ export default function GenerateQuestionsPage() {
               <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">LLM Provider</label>
               <div className="relative">
                 <select name="llm_provider" value={formData.llm_provider} onChange={handleChange} className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                  <option value="gemini">1. Gemini 1.5 Flash (Google)</option>
-                  <option value="openai">2. GPT-4o (OpenAI)</option>
-                  <option value="claude">3. Claude 3.5 Sonnet (Anthropic)</option>
-                  <option value="llama">4. Llama 3 70B (Meta)</option>
-                  <option value="kimi">5. Kimi (Moonshot)</option>
-                  <option value="mistral">6. Mistral Large (Mistral AI)</option>
-                  <option value="cohere">7. Command R+ (Cohere)</option>
-                  <option value="deepseek">8. DeepSeek Coder (DeepSeek)</option>
-                  <option value="qwen">9. Qwen Max (Alibaba)</option>
-                  <option value="yi">10. Yi Large (01.AI)</option>
+                  <option value="gemini">Gemini 2.5 Flash (Google) — default</option>
+                  <option value="openai">GPT-4o (OpenAI)</option>
+                  <option value="groq">Groq (Llama 3 70B) — free tier</option>
+                  <option value="deepseek">DeepSeek Chat — cheap</option>
+                  <option value="kimi">Kimi (Moonshot) — free tier</option>
+                  <option value="mock">Mock (Test, no API key)</option>
                 </select>
                 <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
@@ -264,6 +279,7 @@ export default function GenerateQuestionsPage() {
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               />
             </div>
+
           </div>
         </div>
 

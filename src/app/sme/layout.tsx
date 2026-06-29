@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BookOpen, LayoutDashboard, FileQuestion, FileText, Users, BarChart2, Activity, ChevronDown, Menu, X } from 'lucide-react';
+import { BookOpen, LayoutDashboard, FileQuestion, FileText, Users, BarChart2, Activity, ChevronDown, Menu, X, Clock } from 'lucide-react';
 
 import { LogOut } from 'lucide-react';
 
@@ -13,6 +13,8 @@ const MENU_GROUPS = [
     items: [
       { name: 'Generate Questions', href: '/sme/questions/generate', icon: FileQuestion },
       { name: 'Review Questions', href: '/sme/questions/review', icon: FileText },
+      { name: 'Generation History', href: '/sme/reports', icon: Clock },
+      { name: 'Quality Report', href: '/sme/reports/quality', icon: Activity },
     ],
   },
 ];
