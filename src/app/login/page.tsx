@@ -84,8 +84,7 @@ export default function LoginPage() {
       localStorage.setItem('user', JSON.stringify(user));
 
       if (roles.includes('STUDENT')) {
-        setLoading(false);
-        setStep(2); // move to proctoring step for students
+        router.push('/student');
         return;
       }
 
