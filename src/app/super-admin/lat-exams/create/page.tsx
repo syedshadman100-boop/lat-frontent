@@ -23,6 +23,24 @@ export default function CreateLatExam() {
 
   const [approvedSubjects, setApprovedSubjects] = useState<any[]>([]);
   const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
+  const [approvedGrades, setApprovedGrades] = useState<number[]>([]);
+
+  React.useEffect(() => {
+    const fetchGrades = async () => {
+      try {
+        const response = await apiClient.get('/approved-grades');
+        if (response.data) {
+          setApprovedGrades(response.data);
+          if (response.data.length > 0 && !response.data.includes(examGrade)) {
+            setExamGrade(response.data[0]);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch approved grades", err);
+      }
+    };
+    fetchGrades();
+  }, []);
 
   React.useEffect(() => {
     if (step === 2) {
@@ -241,12 +259,13 @@ export default function CreateLatExam() {
                     value={examGrade}
                     onChange={(e) => setExamGrade(parseInt(e.target.value))}
                     className="w-full appearance-none bg-white border border-[#e2e8f0] rounded-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-shadow">
-                    <option value={3}>Grade 3</option>
-                    <option value={4}>Grade 4</option>
-                    <option value={5}>Grade 5</option>
-                    <option value={6}>Grade 6</option>
-                    <option value={7}>Grade 7</option>
-                    <option value={8}>Grade 8</option>
+                    {approvedGrades.length === 0 ? (
+                      <option value={5}>Grade 5</option>
+                    ) : (
+                      approvedGrades.map(grade => (
+                        <option key={grade} value={grade}>Grade {grade}</option>
+                      ))
+                    )}
                   </select>
                   <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
                 </div>
@@ -325,8 +344,10 @@ export default function CreateLatExam() {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider mb-1">Assessment Group</p>
-                  <p className="text-[14px] font-black text-gray-900">Preparatory</p>
-                  <p className="text-[10px] font-medium text-[#94a3b8] mt-1 leading-snug max-w-[150px]">Auto-selected based on Grade 5</p>
+                  <p className="text-[14px] font-black text-gray-900">
+                    {examGrade === 3 ? 'Preparatory' : examGrade === 6 ? 'Middle' : 'Secondary'}
+                  </p>
+                  <p className="text-[10px] font-medium text-[#94a3b8] mt-1 leading-snug max-w-[150px]">Auto-selected based on Grade {examGrade}</p>
                 </div>
               </div>
 
@@ -337,8 +358,12 @@ export default function CreateLatExam() {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider mb-1">Assessment Basis</p>
-                  <p className="text-[14px] font-black text-gray-900">Previous Academic Year</p>
-                  <p className="text-[10px] font-medium text-[#94a3b8] mt-1 leading-snug max-w-[180px]">Questions will be generated from Grade 4 competencies (LAT-I)</p>
+                  <p className="text-[14px] font-black text-gray-900">
+                    {latType === 'LAT-I' ? 'Previous Academic Year' : 'Current Academic Year'}
+                  </p>
+                  <p className="text-[10px] font-medium text-[#94a3b8] mt-1 leading-snug max-w-[180px]">
+                    Questions will be generated from Grade {latType === 'LAT-I' ? examGrade - 1 : examGrade} competencies ({latType})
+                  </p>
                 </div>
               </div>
 
@@ -349,8 +374,12 @@ export default function CreateLatExam() {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider mb-1">Subjects Included</p>
-                  <p className="text-[14px] font-black text-gray-900">4 Subjects</p>
-                  <p className="text-[10px] font-medium text-[#94a3b8] mt-1 leading-snug max-w-[160px]">English, Hindi, Mathematics, EVS (As applicable for Grade 5)</p>
+                  <p className="text-[14px] font-black text-gray-900">
+                    {approvedSubjects.length} Subjects
+                  </p>
+                  <p className="text-[10px] font-medium text-[#94a3b8] mt-1 leading-snug max-w-[160px]">
+                    {approvedSubjects.map(s => s.name).join(', ') || 'Pending subject approval'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -375,7 +404,7 @@ export default function CreateLatExam() {
             <ul className="space-y-3">
               <li className="flex items-start gap-2 text-[12px] font-medium text-[#475569] leading-relaxed">
                 <span className="text-gray-400 mt-1.5 w-1 h-1 bg-gray-400 rounded-full shrink-0"></span>
-                LAT (Learners' Achievement Test) is a competency-based assessment for Grades 3, 5 and 8.
+                LAT (Learners' Achievement Test) is a competency-based assessment for Grades 3, 6 and 9.
               </li>
               <li className="flex items-start gap-2 text-[12px] font-medium text-[#475569] leading-relaxed">
                 <span className="text-gray-400 mt-1.5 w-1 h-1 bg-gray-400 rounded-full shrink-0"></span>

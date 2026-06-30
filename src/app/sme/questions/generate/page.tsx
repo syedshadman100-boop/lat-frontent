@@ -6,7 +6,7 @@ import apiClient from '@/lib/api-client';
 
 const GRADES = [
   { value: '3', label: 'Grade 3' },
-  { value: '5', label: 'Grade 5' },
+  { value: '6', label: 'Grade 6' },
   { value: '9', label: 'Grade 9' },
 ];
 
@@ -87,7 +87,7 @@ export default function GenerateQuestionsPage() {
   const [loadingLOs, setLoadingLOs] = useState(false);
 
   const [formData, setFormData] = useState({
-    grade_level: '5',
+    grade_level: '3',
     subject_id: '',
     competency_id: '',
     learning_outcome_id: '',
@@ -106,16 +106,28 @@ export default function GenerateQuestionsPage() {
 
   useEffect(() => {
     if (!mounted) return;
-    if (formData.grade_level && curriculumGrade) {
-      apiClient.get(`/curriculum/subjects?gradeLevel=${curriculumGrade}`).then(res => {
-        setSubjects(Array.isArray(res.data) ? res.data : []);
-      }).catch(() => setSubjects([]));
-    } else {
-      apiClient.get('/curriculum/subjects').then(res => {
-        setSubjects(Array.isArray(res.data) ? res.data : []);
-      }).catch(() => setSubjects([]));
-    }
-  }, [mounted, curriculumGrade]);
+    
+    // First try filtering subjects by the strict curriculum grade
+    apiClient.get(`/curriculum/subjects?gradeLevel=${curriculumGrade}`).then(res => {
+      let fetchedSubjects = Array.isArray(res.data) ? res.data : [];
+      
+      // Fallback 1: If no subjects found for curriculum grade (e.g. Grade 2 missing), try the assessment grade
+      if (fetchedSubjects.length === 0 && formData.grade_level) {
+        return apiClient.get(`/curriculum/subjects?gradeLevel=${formData.grade_level}`).then(res2 => {
+          fetchedSubjects = Array.isArray(res2.data) ? res2.data : [];
+          // Fallback 2: If STILL no subjects found, fetch all subjects
+          if (fetchedSubjects.length === 0) {
+            return apiClient.get('/curriculum/subjects').then(res3 => {
+              setSubjects(Array.isArray(res3.data) ? res3.data : []);
+            });
+          }
+          setSubjects(fetchedSubjects);
+        });
+      }
+      
+      setSubjects(fetchedSubjects);
+    }).catch(() => setSubjects([]));
+  }, [mounted, curriculumGrade, formData.grade_level]);
 
   useEffect(() => {
     if (!mounted || !formData.subject_id) {
@@ -131,7 +143,15 @@ export default function GenerateQuestionsPage() {
 
     apiClient.get(`/curriculum/subjects/${formData.subject_id}/goals`).then(res => {
       const goals = Array.isArray(res.data) ? res.data : [];
-      const matchingGoals = goals.filter((g: any) => g.gradeLevel === curriculumGrade);
+      let matchingGoals = goals.filter((g: any) => g.gradeLevel === curriculumGrade);
+      
+      // Fallback if specific curriculum grade is missing in DB
+      if (matchingGoals.length === 0) {
+        matchingGoals = goals.filter((g: any) => g.gradeLevel === parseInt(formData.grade_level));
+      }
+      if (matchingGoals.length === 0) {
+        matchingGoals = goals;
+      }
       const compPromises = matchingGoals.map((g: any) =>
         apiClient.get(`/curriculum/goals/${g.id}/competencies`).then(r => Array.isArray(r.data) ? r.data : []).catch(() => [])
       );
@@ -1077,7 +1097,7 @@ export default function GenerateQuestionsPage() {
                 {/* Footer Actions */}
                 <div className="px-8 py-5 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between">
                   <button type="button" onClick={() => {
-                    setFormData({ grade_level: '5', subject_id: '', competency_id: '', learning_outcome_id: '', bloom_level: 'understanding', difficulty: 'medium', term: '2', count: 5, visual_question_count: 2, llm_provider: 'nvidia', additional_instructions: '' });
+                    setFormData({ grade_level: '3', subject_id: '', competency_id: '', learning_outcome_id: '', bloom_level: 'understanding', difficulty: 'medium', term: '2', count: 5, visual_question_count: 2, llm_provider: 'nvidia', additional_instructions: '' });
                     setCompetencies([]);
                     setLearningOutcomes([]);
                   }} className="px-5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">
