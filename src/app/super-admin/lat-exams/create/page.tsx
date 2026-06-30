@@ -21,6 +21,29 @@ export default function CreateLatExam() {
   const [examIdDisplay, setExamIdDisplay] = useState('LAT-I-G5-2026-0001');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const [approvedSubjects, setApprovedSubjects] = useState<any[]>([]);
+  const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
+
+  React.useEffect(() => {
+    if (step === 2) {
+      const fetchSubjects = async () => {
+        setIsLoadingSubjects(true);
+        try {
+          const targetGrade = latType === 'LAT-I' ? examGrade - 1 : examGrade;
+          const response = await apiClient.get(`/approved-subjects?grade_level=${targetGrade}`);
+          if (response.data) {
+            setApprovedSubjects(response.data);
+          }
+        } catch (err) {
+          console.error("Failed to fetch approved subjects", err);
+        } finally {
+          setIsLoadingSubjects(false);
+        }
+      };
+      fetchSubjects();
+    }
+  }, [step, examGrade, latType]);
+
   const [mockQuestions, setMockQuestions] = useState([
     { id: 1, text: "Which of the following is the national bird of India?", options: ["Peacock", "Parrot", "Pigeon", "Crow"], correct: 0, difficulty: "Easy", topic: "General Knowledge" },
     { id: 2, text: "What is 15 * 6?", options: ["90", "80", "75", "100"], correct: 0, difficulty: "Easy", topic: "Arithmetic" },
@@ -464,64 +487,47 @@ export default function CreateLatExam() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#e2e8f0]">
-                      <tr className="bg-white">
-                        <td className="py-4 px-5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-[#f0fdf4] text-[#16a34a] flex items-center justify-center text-[12px] font-bold">A/z</div>
-                            <span className="text-[13px] font-semibold text-gray-900">English</span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-5 text-center text-[13px] font-semibold text-gray-900">15</td>
-                        <td className="py-4 px-5 text-right">
-                          <button onClick={() => setPreviewSubject('English')} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#eff4ff] text-[#2563eb] hover:bg-[#dbeafe] rounded-lg text-[12px] font-bold transition-colors">
-                            View & Edit
-                          </button>
-                        </td>
-                      </tr>
-                      <tr className="bg-white">
-                        <td className="py-4 px-5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-[#fdf2f8] text-[#db2777] flex items-center justify-center text-[14px] font-bold">अ</div>
-                            <span className="text-[13px] font-semibold text-gray-900">Hindi</span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-5 text-center text-[13px] font-semibold text-gray-900">15</td>
-                        <td className="py-4 px-5 text-right">
-                          <button onClick={() => setPreviewSubject('Hindi')} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#eff4ff] text-[#2563eb] hover:bg-[#dbeafe] rounded-lg text-[12px] font-bold transition-colors">
-                            View & Edit
-                          </button>
-                        </td>
-                      </tr>
-                      <tr className="bg-white">
-                        <td className="py-4 px-5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-[#f1f5f9] text-[#475569] flex items-center justify-center text-[14px] font-bold font-serif">π</div>
-                            <span className="text-[13px] font-semibold text-gray-900">Mathematics</span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-5 text-center text-[13px] font-semibold text-gray-900">20</td>
-                        <td className="py-4 px-5 text-right">
-                          <button onClick={() => setPreviewSubject('Mathematics')} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#eff4ff] text-[#2563eb] hover:bg-[#dbeafe] rounded-lg text-[12px] font-bold transition-colors">
-                            View & Edit
-                          </button>
-                        </td>
-                      </tr>
-                      <tr className="bg-white">
-                        <td className="py-4 px-5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-[#ecfdf5] text-[#10b981] flex items-center justify-center">
-                              <Layers size={14} />
-                            </div>
-                            <span className="text-[13px] font-semibold text-gray-900">EVS</span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-5 text-center text-[13px] font-semibold text-gray-900">10</td>
-                        <td className="py-4 px-5 text-right">
-                          <button onClick={() => setPreviewSubject('EVS')} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#eff4ff] text-[#2563eb] hover:bg-[#dbeafe] rounded-lg text-[12px] font-bold transition-colors">
-                            View & Edit
-                          </button>
-                        </td>
-                      </tr>
+                      {isLoadingSubjects ? (
+                        <tr>
+                          <td colSpan={3} className="py-8 text-center text-[13px] font-semibold text-gray-500">
+                            Loading subjects...
+                          </td>
+                        </tr>
+                      ) : approvedSubjects.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="py-8 text-center text-[13px] font-semibold text-gray-500">
+                            No approved subjects found for this grade.
+                          </td>
+                        </tr>
+                      ) : (
+                        approvedSubjects.map((subject, index) => {
+                          const baseQuestions = Math.floor(60 / approvedSubjects.length);
+                          const isLast = index === approvedSubjects.length - 1;
+                          const remainder = 60 % approvedSubjects.length;
+                          const subjectQuestions = isLast ? baseQuestions + remainder : baseQuestions;
+                          const icon = subject.name.includes('English') ? 'A/z' : subject.name.includes('Hindi') ? 'अ' : subject.name.includes('Math') ? 'π' : <Layers size={14} />;
+                          const bg = subject.name.includes('English') ? 'bg-[#f0fdf4] text-[#16a34a]' : subject.name.includes('Hindi') ? 'bg-[#fdf2f8] text-[#db2777]' : subject.name.includes('Math') ? 'bg-[#f1f5f9] text-[#475569] font-serif' : 'bg-[#ecfdf5] text-[#10b981]';
+
+                          return (
+                            <tr key={subject.id} className="bg-white">
+                              <td className="py-4 px-5">
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[12px] font-bold ${bg}`}>
+                                    {icon}
+                                  </div>
+                                  <span className="text-[13px] font-semibold text-gray-900">{subject.name}</span>
+                                </div>
+                              </td>
+                              <td className="py-4 px-5 text-center text-[13px] font-semibold text-gray-900">{subjectQuestions}</td>
+                              <td className="py-4 px-5 text-right">
+                                <button onClick={() => setPreviewSubject(subject.name)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#eff4ff] text-[#2563eb] hover:bg-[#dbeafe] rounded-lg text-[12px] font-bold transition-colors">
+                                  View & Edit
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
                       <tr className="bg-[#eff4ff]">
                         <td className="py-4 px-5 text-[14px] font-black text-[#2563eb]">Total</td>
                         <td className="py-4 px-5 text-center text-[14px] font-black text-[#2563eb]">60</td>
