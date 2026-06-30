@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, ChevronDown, RefreshCw, Download, Eye, Edit2, MoreVertical, Calendar, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api-client';
 import { Pagination } from '@/components/Pagination';
 
 export default function LatExamsDashboard() {
-
-
+  const router = useRouter();
   const [exams, setExams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -124,7 +124,7 @@ export default function LatExamsDashboard() {
           <p className="text-[#64748b] text-sm font-medium mt-0.5">View, manage and track all LAT exams.</p>
         </div>
         <Link href="/super-admin/lat-exams/create">
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-[#2563eb] hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-sm transition-colors">
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-[#2563eb] hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-sm transition-colors" suppressHydrationWarning>
             <Plus size={18} strokeWidth={2.5} /> Create LAT Exam
           </button>
         </Link>
@@ -140,6 +140,7 @@ export default function LatExamsDashboard() {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by exam name, grade, or type..."
             className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#e2e8f0] rounded-xl text-[13px] font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 placeholder-[#94a3b8]"
+            suppressHydrationWarning
           />
         </div>
 
@@ -147,7 +148,7 @@ export default function LatExamsDashboard() {
           <div className="flex flex-col gap-1.5 w-full md:w-[160px]">
             <label className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider">LAT TYPE</label>
             <div className="relative">
-              <select value={filterLatType} onChange={(e) => setFilterLatType(e.target.value)} className="w-full appearance-none bg-white border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100">
+              <select value={filterLatType} onChange={(e) => setFilterLatType(e.target.value)} className="w-full appearance-none bg-white border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100" suppressHydrationWarning>
                 <option value="All">All</option>
                 <option value="LAT-I">LAT-I</option>
                 <option value="LAT-II">LAT-II</option>
@@ -160,7 +161,7 @@ export default function LatExamsDashboard() {
           <div className="flex flex-col gap-1.5 w-full md:w-[160px]">
             <label className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider">GRADE</label>
             <div className="relative">
-              <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)} className="w-full appearance-none bg-white border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100">
+              <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)} className="w-full appearance-none bg-white border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100" suppressHydrationWarning>
                 <option value="All">All</option>
                 {[1, 2, 3, 4, 5, 6, 7, 8].map(g => (
                   <option key={g} value={`Grade ${g}`}>Grade {g}</option>
@@ -173,7 +174,7 @@ export default function LatExamsDashboard() {
           <div className="flex flex-col gap-1.5 w-full md:w-[160px]">
             <label className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider">STATUS</label>
             <div className="relative">
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full appearance-none bg-white border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100">
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full appearance-none bg-white border border-[#e2e8f0] rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100" suppressHydrationWarning>
                 <option value="All">All</option>
                 <option value="Upcoming">Upcoming</option>
                 <option value="Ongoing">Ongoing</option>
@@ -184,7 +185,7 @@ export default function LatExamsDashboard() {
             </div>
           </div>
 
-          <button onClick={clearFilters} className="flex flex-col gap-1.5 items-center justify-end h-full pt-5">
+          <button onClick={clearFilters} className="flex flex-col gap-1.5 items-center justify-end h-full pt-5" suppressHydrationWarning>
             <span className="flex items-center gap-2 text-[#2563eb] text-[13px] font-bold hover:text-blue-700 px-2 py-2.5">
               <RefreshCw size={14} strokeWidth={2.5} /> Clear Filters
             </span>
@@ -251,9 +252,31 @@ export default function LatExamsDashboard() {
                   </td>
                   <td className="px-6 py-5 text-right">
                     <div className="flex items-center justify-end gap-3">
-                      <button className="text-[#94a3b8] hover:text-[#2563eb] transition-colors"><Eye size={18} strokeWidth={2} /></button>
-                      <button className="text-[#94a3b8] hover:text-[#2563eb] transition-colors"><Edit2 size={18} strokeWidth={2} /></button>
-                      <button className="text-[#94a3b8] hover:text-gray-900 transition-colors"><MoreVertical size={18} strokeWidth={2} /></button>
+                      <button 
+                        onClick={() => window.open(`/super-admin/lat-exams/${exam.id}/preview`, '_blank')}
+                        className="text-[#94a3b8] hover:text-[#2563eb] transition-colors"
+                        title="Preview Paper"
+                        suppressHydrationWarning
+                      >
+                        <Eye size={18} strokeWidth={2} />
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (exam.status !== 'Upcoming' && exam.status !== 'Draft') {
+                            alert(`This exam cannot be edited because its status is ${exam.status}.`);
+                          } else {
+                            router.push(`/super-admin/lat-exams/${exam.id}/edit`);
+                          }
+                        }}
+                        className="text-[#94a3b8] hover:text-[#2563eb] transition-colors" 
+                        title="Edit Paper"
+                        suppressHydrationWarning
+                      >
+                        <Edit2 size={18} strokeWidth={2} />
+                      </button>
+                      <button className="text-[#94a3b8] hover:text-gray-900 transition-colors">
+                        <MoreVertical size={18} strokeWidth={2} />
+                      </button>
                     </div>
                   </td>
                 </tr>

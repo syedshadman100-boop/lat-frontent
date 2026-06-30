@@ -13,14 +13,23 @@ export default function StudentRedirect() {
   useEffect(() => {
     const fetchExamAndRedirect = async () => {
       try {
-        const res = await apiClient.get('/exams/student/upcoming');
+        // 1. Fetch available LAT exams for the student's grade
+        const res = await apiClient.get('/exams/student/available-papers');
+        
         if (res.data && res.data.length > 0) {
-          router.replace(`/student/exam/${res.data[0].id}`);
+          // 2. We have a paper! Let's start the self-serve attempt on the fly
+          const paperId = res.data[0].id;
+          const startRes = await apiClient.post('/exams/student/start-paper', { paper_id: paperId });
+          
+          // 3. Navigate to the newly generated attempt ID
+          if (startRes.data && startRes.data.id) {
+            router.replace(`/student/exam/${startRes.data.id}`);
+          }
         } else {
           setLoading(false);
         }
       } catch (err) {
-        console.error('Failed to load upcoming exams:', err);
+        console.error('Failed to load self-serve exams:', err);
         setLoading(false);
         setError(true);
       }

@@ -1,17 +1,42 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, ChevronDown, Layers, BookOpen, Clock, Shield, Search, Copy, Check, CheckCircle, Eye, Download as DownloadIcon, Calendar, Users, Grid as GridIcon, Filter, Info, FileText, Loader2, RefreshCw, HelpCircle, X } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import confetti from 'canvas-confetti';
 
-export default function CreateLatExam() {
+export default function EditLatExam() {
   const router = useRouter();
+  const params = useParams();
+  const examId = params.id as string;
+
   const [latType, setLatType] = useState('LAT-I');
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [createdExamId, setCreatedExamId] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [createdExamId, setCreatedExamId] = useState<string | null>(examId);
+
+  // Fetch existing exam data
+  useEffect(() => {
+    if (!examId) return;
+    setIsInitializing(true);
+    
+    apiClient.get(`/papers/${examId}`)
+      .then(res => {
+        const data = res.data;
+        setLatType(data.title.includes('LAT-I') ? 'LAT-I' : data.title.includes('LAT-II') ? 'LAT-II' : 'LAT');
+        setExamGrade(data.gradeLevel.toString());
+        setExamName(data.title);
+        
+        const dateObj = new Date(data.createdAt);
+        setExamDate(dateObj.toISOString().split('T')[0]);
+        setExamDuration(data.durationMinutes.toString());
+      })
+      .catch(err => console.error(err))
+      .finally(() => setIsInitializing(false));
+  }, [examId]);
+  
   const [previewSubject, setPreviewSubject] = useState<any | null>(null);
   const [previewQuestions, setPreviewQuestions] = useState<any[]>([]);
   const [alternativeQuestions, setAlternativeQuestions] = useState<any[]>([]);
@@ -54,8 +79,6 @@ export default function CreateLatExam() {
       const fetchSubjects = async () => {
         setIsLoadingSubjects(true);
         try {
-          // Questions in the question bank are saved with the assessmentGrade they are intended for (e.g., Grade 3)
-          // even if they test the previous year's curriculum (LAT-I).
           const targetGrade = examGrade;
           const response = await apiClient.get(`/approved-subjects?grade_level=${targetGrade}`);
           if (response.data) {
@@ -136,7 +159,7 @@ export default function CreateLatExam() {
         }
       };
 
-      const response = await apiClient.post('/papers', payload);
+      const response = await apiClient.put(`/papers/${examId}`, payload);
       
       if (response.data) {
         setCreatedExamId(response.data.id?.toString());
@@ -144,8 +167,8 @@ export default function CreateLatExam() {
         setStep(3);
       }
     } catch (error: any) {
-      console.error('Failed to create exam:', error);
-      setErrorMsg(error?.response?.data?.message || error?.message || 'Failed to create exam.');
+      console.error('Failed to update exam:', error);
+      setErrorMsg(error?.response?.data?.message || error?.message || 'Failed to update exam.');
     } finally {
       setIsSubmitting(false);
     }
@@ -156,17 +179,24 @@ export default function CreateLatExam() {
       
       {/* Header Area */}
       <div className="pb-2">
-        <div className="max-w-[1200px] mx-auto">
-          <button 
-            onClick={() => step === 2 ? setStep(1) : router.back()}
-            className="flex items-center gap-2 text-[13px] font-bold text-gray-900 hover:text-[#2563eb] transition-colors mb-4"
-          >
-            <ArrowLeft size={16} strokeWidth={2.5} /> Back
-          </button>
-          
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Create LAT Exam</h1>
-          <p className="text-[#64748b] text-[13px] font-medium mt-1">Generate a new LAT exam based on academic year and grade.</p>
+      {isInitializing ? (
+        <div className="flex-1 flex items-center justify-center">
+          <RefreshCw className="animate-spin text-blue-600" size={32} />
         </div>
+      ) : (
+      <div className="flex-1 max-w-[1200px] mx-auto w-full px-6 py-8">
+        
+        {/* Header section */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <button onClick={() => router.push('/super-admin/lat-exams')} className="flex items-center text-sm font-bold text-gray-500 hover:text-gray-900 mb-4 transition-colors">
+              <ArrowLeft size={16} className="mr-2" /> Back
+            </button>
+            <h1 className="text-2xl font-black tracking-tight text-gray-900">Edit LAT Exam</h1>
+            <p className="text-gray-500 text-sm font-medium mt-1">Update LAT exam configuration and regenerate blueprint.</p>
+          </div>
+        </div></div>
+      )}
       </div>
 
       {/* Main Layout Grid */}

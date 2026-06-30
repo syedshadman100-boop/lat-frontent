@@ -37,6 +37,14 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     router.push('/login');
   };
 
+  if (pathname.endsWith('/preview')) {
+    return (
+      <div className="font-sans text-gray-900 bg-[#f1f5f9] min-h-screen">
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className="flex fixed inset-0 bg-[#f4f7fb] text-gray-900 overflow-hidden font-sans">
       
