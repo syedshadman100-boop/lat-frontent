@@ -3,15 +3,15 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BookOpen, LayoutDashboard, FileQuestion, FileText, Users, BarChart2, Activity, ChevronDown, Menu, X, LogOut, Settings } from 'lucide-react';
+import { BookOpen, LayoutDashboard, FileQuestion, FileText, Users, BarChart2, Activity, ChevronDown, Menu, X, LogOut, Settings, CheckCircle2 } from 'lucide-react';
 
 const MENU_GROUPS = [
   {
     title: 'MAIN',
     items: [
       { name: 'Dashboard', href: '/super-admin/dashboard', icon: LayoutDashboard },
-      { name: 'Blueprint Generator', href: '/super-admin/questions/blueprint', icon: Settings },
       { name: 'Final Review', href: '/super-admin/questions/review', icon: FileQuestion },
+      { name: 'Approved Questions', href: '/super-admin/questions/blueprint', icon: CheckCircle2 },
       { name: 'LAT Exam', href: '/super-admin/lat-exams', icon: FileText },
       { name: 'Users management', href: '/super-admin/users', icon: Users },
     ],

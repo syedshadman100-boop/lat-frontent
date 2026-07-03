@@ -8,6 +8,10 @@ import {
 import apiClient from '@/lib/api-client';
 import BulkAddModal from './BulkAddModal';
 import AddStudentModal from './AddStudentModal';
+import StudentDetailModal from './StudentDetailModal';
+import StartExamModal from './StartExamModal';
+import UploadSubmissionModal from './UploadSubmissionModal';
+import { Eye, ToggleLeft, FileText } from 'lucide-react';
 
 export default function StudentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -16,9 +20,31 @@ export default function StudentsPage() {
   const [error, setError] = useState('');
   const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
   const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
+  const [selectedStudentForDetail, setSelectedStudentForDetail] = useState<any>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
+  const [isStartExamModalOpen, setIsStartExamModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [targetStudentsForExam, setTargetStudentsForExam] = useState<any[]>([]);
+  const [targetStudentForUpload, setTargetStudentForUpload] = useState<any>(null);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   useEffect(() => {
     fetchStudents();
+  }, []);
+
+  useEffect(() => {
+    const handleClose = () => setActiveDropdownId(null);
+    window.addEventListener('click', handleClose);
+    return () => window.removeEventListener('click', handleClose);
   }, []);
 
   const fetchStudents = async () => {
@@ -27,6 +53,7 @@ export default function StudentsPage() {
       const res = await apiClient.get('/users/students');
       // The API returns an array of users with `studentProfile`
       const backendStudents = Array.isArray(res.data) ? res.data : [];
+      console.log("BACKEND STUDENTS:", backendStudents);
       
       const mappedStudents = backendStudents.map((s, idx) => {
         const name = `${s.firstName || ''} ${s.lastName || ''}`.trim();
@@ -36,18 +63,52 @@ export default function StudentsPage() {
         const bgs = ['bg-blue-100 text-blue-700', 'bg-pink-100 text-pink-700', 'bg-purple-100 text-purple-700', 'bg-orange-100 text-orange-700'];
         const bg = bgs[idx % bgs.length];
 
+        let statusLabel = 'Not Started';
+        let progressVal = 0;
+        let timeTaken = '-';
+        let isOffline = false;
+        let studentExamId = null;
+        let score = null;
+
+        if (s.activeExam) {
+          isOffline = s.activeExam.isOffline;
+          studentExamId = s.activeExam.studentExamId;
+          score = s.activeExam.score;
+          if (s.activeExam.status === 'started') {
+            statusLabel = 'In Progress';
+            progressVal = 45; // Mock progress
+          } else if (s.activeExam.status === 'submitted') {
+            statusLabel = 'Completed';
+            progressVal = 100;
+          } else if (s.activeExam.status === 'graded') {
+            statusLabel = 'Completed';
+            progressVal = 100;
+          } else if (s.activeExam.status === 'assigned') {
+            statusLabel = isOffline ? 'Pending Offline Upload' : 'Assigned (Online)';
+          } else {
+            statusLabel = 'Not Started';
+          }
+        }
+
         return {
           id: s.id,
           initials: initials || 'ST',
           bg,
           name: name || 'Unknown Student',
-          class: 'Grade 5 A', // Hardcoded until we have class mapping
+          class: s.studentProfile?.gradeId 
+            ? `Grade ${s.studentProfile.gradeId}${s.studentProfile.section ? ` ${s.studentProfile.section}` : ''}`
+            : '-',
           roll: s.studentProfile?.rollNo || s.studentProfile?.admissionNo || '-',
-          assessment: 'Mathematics LAT', // Hardcoded placeholder
-          status: 'Not Started', // Hardcoded placeholder
-          progress: 0, // Hardcoded placeholder
-          time: '-', // Hardcoded placeholder
-          updated: '-', // Hardcoded placeholder
+          assessment: s.activeExam ? s.activeExam.examTitle : '-',
+          status: statusLabel,
+          isOffline: !!isOffline,
+          studentExamId,
+          progress: progressVal,
+          time: timeTaken,
+          score: score,
+          updated: '-',
+          userStatus: s.status || 'active',
+          raw: s,
         };
       });
 
@@ -61,10 +122,57 @@ export default function StudentsPage() {
     }
   };
 
+  const handleToggleStatus = async (studentId: string, newStatus: 'active' | 'inactive') => {
+    try {
+      await apiClient.patch(`/users/${studentId}/status`, { status: newStatus });
+      fetchStudents();
+    } catch (err) {
+      console.error('Failed to update student status:', err);
+      alert('Failed to update status. Please try again.');
+    }
+  };
+
   const filteredStudents = students.filter(s => 
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     s.roll.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const totalItems = filteredStudents.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const activePage = Math.min(currentPage, totalPages || 1);
+  const startIndex = (activePage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const paginatedStudents = filteredStudents.slice(startIndex, endIndex);
+
+  const toggleSelectAll = () => {
+    if (selectedStudentIds.size === paginatedStudents.length) {
+      setSelectedStudentIds(new Set());
+    } else {
+      setSelectedStudentIds(new Set(paginatedStudents.map(s => s.id)));
+    }
+  };
+
+  const toggleSelectStudent = (id: string) => {
+    const newSet = new Set(selectedStudentIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedStudentIds(newSet);
+  };
+
+  const handleOpenBulkStartExam = () => {
+    const targets = students.filter(s => selectedStudentIds.has(s.id));
+    if (targets.length === 0) return;
+    setTargetStudentsForExam(targets);
+    setIsStartExamModalOpen(true);
+  };
+
+  const handleExamStarted = (mode: 'online' | 'offline', paperId: string, assignedStudentIds: string[]) => {
+    fetchStudents();
+    setSelectedStudentIds(new Set());
+    if (mode === 'offline') {
+      window.open(`/super-admin/lat-exams/${paperId}/preview?studentIds=${assignedStudentIds.join(',')}&print=true`, '_blank');
+    }
+  };
 
   return (
     <div className="p-8">
@@ -109,7 +217,7 @@ export default function StudentsPage() {
           </div>
           <div>
             <p className="text-xs text-gray-500 font-medium mb-1 uppercase tracking-wider">Completed</p>
-            <p className="text-2xl font-bold text-gray-900">0</p>
+            <p className="text-2xl font-bold text-gray-900">{students.filter(s => s.status === 'Completed').length}</p>
           </div>
         </div>
         <div className="bg-white border border-gray-100 p-5 rounded-xl shadow-sm flex items-center space-x-4 opacity-75">
@@ -118,7 +226,7 @@ export default function StudentsPage() {
           </div>
           <div>
             <p className="text-xs text-gray-500 font-medium mb-1 uppercase tracking-wider">In Progress</p>
-            <p className="text-2xl font-bold text-gray-900">0</p>
+            <p className="text-2xl font-bold text-gray-900">{students.filter(s => ['In Progress', 'Pending Offline Upload'].includes(s.status)).length}</p>
           </div>
         </div>
         <div className="bg-white border border-gray-100 p-5 rounded-xl shadow-sm flex items-center space-x-4">
@@ -127,7 +235,7 @@ export default function StudentsPage() {
           </div>
           <div>
             <p className="text-xs text-gray-500 font-medium mb-1 uppercase tracking-wider">Not Started</p>
-            <p className="text-2xl font-bold text-gray-900">{students.length}</p>
+            <p className="text-2xl font-bold text-gray-900">{students.filter(s => !['Completed', 'In Progress', 'Pending Offline Upload'].includes(s.status)).length}</p>
           </div>
         </div>
       </div>
@@ -152,6 +260,15 @@ export default function StudentsPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          {selectedStudentIds.size > 0 && (
+            <button
+              onClick={handleOpenBulkStartExam}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium transition-colors"
+            >
+              <FileText size={16} />
+              <span>Start Exam for {selectedStudentIds.size} student(s)</span>
+            </button>
+          )}
         </div>
 
         {/* Data Table */}
@@ -173,21 +290,37 @@ export default function StudentsPage() {
             <table className="w-full text-sm text-left text-gray-500">
               <thead className="text-xs text-gray-400 uppercase bg-gray-50/50 border-b border-gray-100">
                 <tr>
+                  <th className="px-6 py-4 font-semibold w-12 text-center">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      checked={paginatedStudents.length > 0 && selectedStudentIds.size === paginatedStudents.length}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
                   <th className="px-6 py-4 font-semibold w-16">#</th>
                   <th className="px-6 py-4 font-semibold">Student Name</th>
                   <th className="px-6 py-4 font-semibold">Class</th>
                   <th className="px-6 py-4 font-semibold">Roll Number</th>
                   <th className="px-6 py-4 font-semibold">Current Assessment</th>
                   <th className="px-6 py-4 font-semibold">Status</th>
-                  <th className="px-6 py-4 font-semibold">Progress</th>
+                  <th className="px-6 py-4 font-semibold">Score</th>
                   <th className="px-6 py-4 font-semibold">Time Taken</th>
                   <th className="px-6 py-4 font-semibold text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredStudents.map((student, index) => (
-                  <tr key={student.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-gray-900">{index + 1}</td>
+                {paginatedStudents.map((student, index) => (
+                  <tr key={student.id} className={`hover:bg-gray-50/50 transition-colors ${selectedStudentIds.has(student.id) ? 'bg-blue-50/10' : ''}`}>
+                    <td className="px-6 py-4 text-center">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        checked={selectedStudentIds.has(student.id)}
+                        onChange={() => toggleSelectStudent(student.id)}
+                      />
+                    </td>
+                    <td className="px-6 py-4 font-medium text-gray-900">{startIndex + index + 1}</td>
                     <td className="px-6 py-4 font-medium text-gray-900 flex items-center space-x-3">
                       <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold ${student.bg}`}>
                         {student.initials}
@@ -210,6 +343,18 @@ export default function StudentsPage() {
                           <span>In Progress</span>
                         </span>
                       )}
+                      {student.status === 'Pending Offline Upload' && (
+                        <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
+                          <Clock size={12} />
+                          <span>Pending Upload</span>
+                        </span>
+                      )}
+                      {student.status === 'Assigned (Online)' && (
+                        <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                          <CircleDot size={12} />
+                          <span>Assigned (Online)</span>
+                        </span>
+                      )}
                       {student.status === 'Not Started' && (
                         <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
                           <CircleDot size={12} />
@@ -217,27 +362,87 @@ export default function StudentsPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 w-40">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full ${
-                              student.status === 'Completed' ? 'bg-green-500' : 
-                              student.status === 'In Progress' ? 'bg-orange-500' : 'bg-transparent'
-                            }`}
-                            style={{ width: `${student.progress}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-xs font-medium w-9 text-right text-gray-900">
-                          {student.progress}%
-                        </span>
-                      </div>
+                    <td className="px-6 py-4 font-bold text-gray-700">
+                      {student.status === 'Completed' ? (student.score !== null ? student.score : '-') : '-'}
                     </td>
                     <td className="px-6 py-4">{student.time}</td>
-                    <td className="px-6 py-4 text-center">
-                      <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors">
+                    <td className="px-6 py-4 text-center relative">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveDropdownId(prev => (prev === student.id ? null : student.id));
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                      >
                         <MoreVertical size={16} />
                       </button>
+
+                      {/* Dropdown Menu */}
+                      {activeDropdownId === student.id && (
+                        <div className="absolute right-6 mt-1 w-40 bg-white border border-gray-100 rounded-xl shadow-lg py-1.5 z-30 text-left">
+                          <button
+                            onClick={() => {
+                              setSelectedStudentForDetail(student);
+                              setIsDetailModalOpen(true);
+                              setActiveDropdownId(null);
+                            }}
+                            className="flex items-center space-x-2 w-full px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <Eye size={14} className="text-gray-400" />
+                            <span>View Detail</span>
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              setTargetStudentsForExam([student]);
+                              setIsStartExamModalOpen(true);
+                              setActiveDropdownId(null);
+                            }}
+                            className="flex items-center space-x-2 w-full px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <FileText size={14} className="text-blue-500" />
+                            <span>Start Exam</span>
+                          </button>
+
+                          {student.isOffline && student.studentExamId && student.status !== 'Completed' && (
+                            <button
+                              onClick={() => {
+                                setTargetStudentForUpload(student);
+                                setIsUploadModalOpen(true);
+                                setActiveDropdownId(null);
+                              }}
+                              className="flex items-center space-x-2 w-full px-4 py-2 text-xs font-medium text-green-700 hover:bg-green-50 transition-colors"
+                            >
+                              <Upload size={14} className="text-green-500" />
+                              <span>Upload Submission</span>
+                            </button>
+                          )}
+                          
+                          {student.userStatus === 'active' ? (
+                            <button
+                              onClick={() => {
+                                handleToggleStatus(student.id, 'inactive');
+                                setActiveDropdownId(null);
+                              }}
+                              className="flex items-center space-x-2 w-full px-4 py-2 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                            >
+                              <ToggleLeft size={14} className="text-red-400 animate-pulse" />
+                              <span>Mark Inactive</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                handleToggleStatus(student.id, 'active');
+                                setActiveDropdownId(null);
+                              }}
+                              className="flex items-center space-x-2 w-full px-4 py-2 text-xs font-medium text-green-600 hover:bg-green-50 transition-colors"
+                            >
+                              <ToggleLeft size={14} className="text-green-400 rotate-180 transition-transform duration-300" />
+                              <span>Mark Active</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -247,17 +452,41 @@ export default function StudentsPage() {
         </div>
 
         {/* Pagination */}
-        {!loading && filteredStudents.length > 0 && (
+        {!loading && totalItems > 0 && (
           <div className="p-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
             <div>
-              Showing <span className="font-medium text-gray-900">1</span> to <span className="font-medium text-gray-900">{filteredStudents.length}</span> of <span className="font-medium text-gray-900">{students.length}</span> students
+              Showing <span className="font-medium text-gray-900">{totalItems === 0 ? 0 : startIndex + 1}</span> to <span className="font-medium text-gray-900">{endIndex}</span> of <span className="font-medium text-gray-900">{totalItems}</span> students
             </div>
             <div className="flex items-center space-x-2">
-              <button className="px-3 py-1.5 border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors" disabled>Previous</button>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={activePage === 1}
+                className="px-3 py-1.5 border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                Previous
+              </button>
               <div className="flex space-x-1">
-                <button className="px-3 py-1.5 bg-blue-50 text-blue-600 font-medium rounded-md">1</button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+                      page === activePage
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'border border-gray-200 hover:bg-gray-50 text-gray-500'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
               </div>
-              <button className="px-3 py-1.5 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors" disabled>Next</button>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={activePage === totalPages}
+                className="px-3 py-1.5 border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                Next
+              </button>
             </div>
           </div>
         )}
@@ -267,12 +496,46 @@ export default function StudentsPage() {
       <BulkAddModal 
         isOpen={isBulkAddModalOpen} 
         onClose={() => setIsBulkAddModalOpen(false)} 
+        onSuccess={fetchStudents}
       />
 
       <AddStudentModal 
         isOpen={isAddStudentModalOpen}
         onClose={() => setIsAddStudentModalOpen(false)}
+        onSuccess={fetchStudents}
       />
+
+      <StudentDetailModal 
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedStudentForDetail(null);
+        }}
+        student={selectedStudentForDetail}
+      />
+
+      <StartExamModal
+        isOpen={isStartExamModalOpen}
+        onClose={() => setIsStartExamModalOpen(false)}
+        selectedStudents={targetStudentsForExam}
+        onSuccess={handleExamStarted}
+      />
+
+      {targetStudentForUpload && (
+        <UploadSubmissionModal
+          isOpen={isUploadModalOpen}
+          onClose={() => {
+            setIsUploadModalOpen(false);
+            setTargetStudentForUpload(null);
+          }}
+          onSuccess={() => {
+            fetchStudents();
+            setTargetStudentForUpload(null);
+          }}
+          studentName={targetStudentForUpload.name}
+          studentExamId={targetStudentForUpload.studentExamId}
+        />
+      )}
     </div>
   );
 }

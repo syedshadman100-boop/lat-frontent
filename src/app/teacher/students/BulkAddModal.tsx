@@ -2,21 +2,29 @@ import React, { useState, useRef } from 'react';
 import { X, Download, CloudUpload, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import apiClient from '@/lib/api-client';
+import { formatErrorMessage } from '@/lib/utils';
 
 interface BulkAddModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export default function BulkAddModal({ isOpen, onClose }: BulkAddModalProps) {
+export default function BulkAddModal({ isOpen, onClose, onSuccess }: BulkAddModalProps) {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'error') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 4000);
+  };
 
   if (!isOpen) return null;
 
@@ -47,23 +55,21 @@ export default function BulkAddModal({ isOpen, onClose }: BulkAddModalProps) {
 
   const handleSave = async () => {
     if (!file) {
-      setError('Please upload a CSV file first.');
+      showToast('Please upload a CSV file first.', 'error');
       return;
     }
     if (!selectedClass || !selectedSection) {
-      setError('Please select a Class and Section.');
+      showToast('Please select a Class and Section.', 'error');
       return;
     }
 
     setLoading(true);
-    setError('');
-    setSuccess('');
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
       formData.append('gradeId', selectedClass);
       formData.append('section', selectedSection);
+      formData.append('file', file);
 
       const response = await apiClient.post('/users/upload-students', formData, {
         headers: {
@@ -72,22 +78,30 @@ export default function BulkAddModal({ isOpen, onClose }: BulkAddModalProps) {
       });
 
       if (response.data.failedCount > 0) {
-        setError(`Uploaded ${response.data.successCount}. Failed ${response.data.failedCount}. Example error: ${response.data.failures[0].error}`);
+        const exampleError = formatErrorMessage(response.data.failures[0].error);
+        showToast(`Successfully uploaded ${response.data.successCount} students. Failed to upload ${response.data.failedCount} students. Example error: "${exampleError}"`, 'error');
         if (response.data.successCount > 0) {
           setTimeout(() => {
             setFile(null);
+            setSelectedClass('');
+            setSelectedSection('');
+            onSuccess?.();
             onClose();
           }, 4000);
         }
       } else {
-        setSuccess(`Successfully uploaded ${response.data.successCount} students.`);
+        showToast(`Successfully uploaded ${response.data.successCount} students.`, 'success');
         setTimeout(() => {
           setFile(null);
+          setSelectedClass('');
+          setSelectedSection('');
+          onSuccess?.();
           onClose();
         }, 2000);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Failed to process file.');
+      const errMsg = err.response?.data?.message || err.message || 'Failed to process file.';
+      showToast(formatErrorMessage(errMsg), 'error');
     } finally {
       setLoading(false);
     }
@@ -118,9 +132,6 @@ export default function BulkAddModal({ isOpen, onClose }: BulkAddModalProps) {
         {/* Content */}
         <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-gray-50/30">
           <div className="space-y-6">
-            
-            {error && <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm border border-red-100">{error}</div>}
-            {success && <div className="p-3 bg-green-50 text-green-600 rounded-lg text-sm border border-green-100">{success}</div>}
             
             {/* Step 1 */}
             <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
@@ -170,9 +181,9 @@ export default function BulkAddModal({ isOpen, onClose }: BulkAddModalProps) {
                         onChange={(e) => setSelectedClass(e.target.value)}
                       >
                         <option value="">Select Class</option>
+                        <option value="3">Grade 3</option>
                         <option value="6">Grade 6</option>
-                        <option value="7">Grade 7</option>
-                        <option value="8">Grade 8</option>
+                        <option value="9">Grade 9</option>
                       </select>
                     </div>
                     <div className="space-y-1.5">
@@ -257,6 +268,27 @@ export default function BulkAddModal({ isOpen, onClose }: BulkAddModalProps) {
         </div>
 
       </div>
+
+      {toast && (
+        <div className={`fixed top-6 right-6 z-[100] flex items-center space-x-2.5 ${toast.type === 'error' ? 'bg-red-50 text-red-800 border-red-200' : 'bg-green-50 text-green-800 border-green-200'} border px-4 py-3.5 rounded-xl shadow-xl animate-fade-in max-w-sm text-sm font-medium`}>
+          {toast.type === 'error' ? (
+            <svg className="h-5 w-5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ) : (
+            <svg className="h-5 w-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )}
+          <span className="break-words">{toast.message}</span>
+          <button 
+            onClick={() => setToast(null)}
+            className={`p-1 rounded-full transition-colors ${toast.type === 'error' ? 'hover:bg-red-100 text-red-500' : 'hover:bg-green-100 text-green-500'}`}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

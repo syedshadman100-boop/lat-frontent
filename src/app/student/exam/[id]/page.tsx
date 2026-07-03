@@ -142,6 +142,10 @@ export default function StudentExamPage() {
   }, [remainingTime, submitted, submitting]);
 
   const loadExam = async () => {
+    if (!studentExamId || studentExamId === 'undefined' || studentExamId === 'null') {
+      console.warn("loadExam skipped: studentExamId is not ready yet or invalid.");
+      return;
+    }
     try {
       const res = await apiClient.post('/exams/attempt/start', { exam_id: studentExamId });
       setExamData(res.data);
@@ -215,16 +219,25 @@ export default function StudentExamPage() {
     if (submitted) return;
     const currentQId = questions[currentIdx].id;
 
+    // If clicking the same option again, we deselect it.
+    const isDeselecting = answers[currentQId] === optionKey;
+    const finalOptionKey = isDeselecting ? null : optionKey;
+
     // Update local state immediately
-    setAnswers((prev) => ({
-      ...prev,
-      [currentQId]: optionKey,
-    }));
+    setAnswers((prev) => {
+      const newAnswers = { ...prev };
+      if (isDeselecting) {
+        delete newAnswers[currentQId];
+      } else {
+        newAnswers[currentQId] = optionKey;
+      }
+      return newAnswers;
+    });
 
     const answerPayload = {
       student_exam_id: studentExamId,
       question_id: currentQId,
-      selected_option_key: optionKey,
+      selected_option_key: finalOptionKey,
       time_spent_seconds: timeSpent[currentQId] || 0,
     };
 
@@ -350,10 +363,14 @@ export default function StudentExamPage() {
           )}
 
           <button
-            onClick={() => router.push('/student')}
+            onClick={() => {
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              router.push('/login');
+            }}
             className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-sm transition-all shadow-md shadow-indigo-600/20"
           >
-            Back to Dashboard
+            Sign Out
           </button>
         </div>
       </div>
@@ -572,8 +589,8 @@ export default function StudentExamPage() {
           {/* Left Column: Question Card */}
           <div className="col-span-12 lg:col-span-8 bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col justify-between overflow-hidden h-auto lg:h-full min-h-[500px] lg:min-h-0">
             {/* Header */}
-            <div className="px-8 py-5 border-b border-slate-100 bg-white shrink-0">
-              <span className="text-sm font-bold text-slate-850">
+            <div className="px-8 py-5 border-b border-slate-100 bg-white shrink-0 flex items-center">
+              <span className="text-sm font-bold text-blue-700 bg-blue-50 px-4 py-1.5 rounded-lg border border-blue-100 shadow-sm inline-block">
                 Question {currentIdx + 1} of {questions.length}
               </span>
             </div>
@@ -582,7 +599,7 @@ export default function StudentExamPage() {
             <div className="p-8 space-y-6 flex-1 min-h-0 overflow-y-auto scrollbar-light bg-white">
 
 
-              <h3 className="text-[19px] font-bold font-plus-jakarta leading-relaxed text-slate-900">
+              <h3 className="text-[18px] font-bold font-plus-jakarta leading-relaxed text-slate-900">
                 {activeQuestion.question_text}
               </h3>
 
@@ -634,7 +651,7 @@ export default function StudentExamPage() {
                             }`}>
                             <span className={`h-3 w-3 rounded-full bg-blue-500 transition-all duration-300 transform ${isSelected ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`} />
                           </span>
-                          <span className="text-sm font-semibold select-none flex-1">
+                          <span className="text-[15px] font-semibold select-none flex-1">
                             {opt.option_key}. {opt.option_text}
                           </span>
                         </div>
@@ -651,7 +668,7 @@ export default function StudentExamPage() {
             </div>
 
             {/* Footer */}
-            <div className="px-8 py-5 border-t border-slate-100 flex items-center justify-between bg-white shrink-0">
+            <div className="px-8 py-5 border-t border-slate-100 flex items-center justify-end gap-3 bg-white shrink-0">
               <button
                 disabled={currentIdx === 0}
                 onClick={() => setCurrentIdx((prev) => prev - 1)}
@@ -704,7 +721,7 @@ export default function StudentExamPage() {
               </div>
 
               {/* Navigator Grid */}
-              <div className="grid grid-cols-5 sm:grid-cols-8 lg:grid-cols-5 gap-3 sm:gap-4 overflow-y-auto scrollbar-light p-1 pr-2 flex-1 content-start">
+              <div className="grid grid-cols-8 sm:grid-cols-12 lg:grid-cols-8 gap-3 sm:gap-4 overflow-y-auto scrollbar-light p-1 pr-2 flex-1 content-start">
                 {questions.map((q, idx) => {
                   const isVisited = currentIdx === idx;
                   const isAnswered = !!answers[q.id];
@@ -713,7 +730,7 @@ export default function StudentExamPage() {
                     <button
                       key={q.id}
                       onClick={() => setCurrentIdx(idx)}
-                      className={`w-full aspect-square rounded-xl font-bold text-[13px] sm:text-sm flex items-center justify-center transition-all cursor-pointer select-none ${
+                      className={`w-full aspect-square rounded-lg font-bold text-[10px] flex items-center justify-center transition-all cursor-pointer select-none ${
                         isVisited
                           ? 'bg-blue-600 text-white shadow-md scale-105 border-2 border-blue-600'
                           : isAnswered

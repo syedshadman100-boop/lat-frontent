@@ -18,8 +18,8 @@ export default function CreateLatExam() {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [replacingQuestionId, setReplacingQuestionId] = useState<number | null>(null);
   
-  const [examName, setExamName] = useState('Grade 5 LAT-I (2026)');
-  const [examGrade, setExamGrade] = useState(5);
+  const [examName, setExamName] = useState('Grade 3 LAT-I (2026)');
+  const [examGrade, setExamGrade] = useState(3);
   const [examDate, setExamDate] = useState('2026-07-10');
   const [examTime, setExamTime] = useState('09:00');
   const [examDuration, setExamDuration] = useState(90);
@@ -28,23 +28,14 @@ export default function CreateLatExam() {
 
   const [approvedSubjects, setApprovedSubjects] = useState<any[]>([]);
   const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
-  const [approvedGrades, setApprovedGrades] = useState<number[]>([]);
+  const [approvedGrades, setApprovedGrades] = useState<number[]>([3, 6, 9]);
 
   React.useEffect(() => {
-    const fetchGrades = async () => {
-      try {
-        const response = await apiClient.get('/approved-grades');
-        if (response.data) {
-          setApprovedGrades(response.data);
-          if (response.data.length > 0 && !response.data.includes(examGrade)) {
-            setExamGrade(response.data[0]);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch approved grades", err);
-      }
-    };
-    fetchGrades();
+    // LAT is specifically for Grades 3, 6, and 9
+    setApprovedGrades([3, 6, 9]);
+    if (![3, 6, 9].includes(examGrade)) {
+      setExamGrade(3);
+    }
   }, []);
 
   const [subjectSelections, setSubjectSelections] = useState<Record<string, number>>({});
@@ -124,7 +115,6 @@ export default function CreateLatExam() {
     try {
       const payload = {
         title: examName,
-        subject_id: 2, 
         grade_level: examGrade,
         term: latType === 'LAT-I' ? 'term1' : 'term2',
         duration_minutes: examDuration,

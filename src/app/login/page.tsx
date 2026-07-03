@@ -155,14 +155,16 @@ export default function LoginPage() {
             A unified platform to create, deliver and analyze assessments for learners everywhere.
           </p>
 
-          {/* Illustration Placeholder - Mimicking the layout of the image */}
+          {/* 3D Illustration */}
           <div className="mt-8 relative flex-1 min-h-[250px] w-full max-w-[400px]">
-             {/* Replace with actual 3D laptop illustration later */}
-             <div className="absolute inset-0 bg-gradient-to-tr from-[#e2eaf8] to-transparent rounded-2xl flex items-center justify-center border border-white/50 shadow-[inset_0_0_20px_rgba(255,255,255,0.5)]">
-                <div className="text-slate-400 font-medium text-sm text-center px-4">
-                  [Illustration Area]<br />
-                  <span className="text-xs font-normal">Please add the laptop 3D graphic here</span>
-                </div>
+             <div className="absolute inset-0 bg-gradient-to-tr from-[#e2eaf8] to-transparent rounded-2xl flex items-center justify-center border border-white/50 shadow-[inset_0_0_20px_rgba(255,255,255,0.5)] overflow-hidden">
+                <Image 
+                  src="/login-illustration.png" 
+                  alt="LAT Educational Platform" 
+                  fill 
+                  style={{ objectFit: 'cover' }}
+                  className="mix-blend-multiply hover:scale-105 transition-transform duration-700 ease-in-out"
+                />
              </div>
           </div>
         </div>

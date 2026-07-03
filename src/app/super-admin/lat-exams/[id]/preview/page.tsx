@@ -9,7 +9,9 @@ export default function ExamPreviewPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const studentIdsStr = searchParams.get('studentIds');
   const [exam, setExam] = useState<any>(null);
+  const [students, setStudents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const contentRef = React.useRef<HTMLDivElement>(null);
   const { useReactToPrint } = require('react-to-print');
@@ -31,13 +33,28 @@ export default function ExamPreviewPage() {
   });
 
   useEffect(() => {
-    if (params.id) {
-      apiClient.get(`/papers/${params.id}`)
-        .then(res => setExam(res.data))
-        .catch(err => console.error(err))
-        .finally(() => setIsLoading(false));
+    async function fetchData() {
+      if (params.id) {
+        try {
+          const res = await apiClient.get(`/papers/${params.id}`);
+          setExam(res.data);
+          
+          if (studentIdsStr) {
+            const studentIds = studentIdsStr.split(',');
+            const studentsRes = await apiClient.get('/users/students');
+            const allStudents = Array.isArray(studentsRes.data) ? studentsRes.data : [];
+            const targetStudents = allStudents.filter(s => studentIds.includes(s.id));
+            setStudents(targetStudents);
+          }
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setIsLoading(false);
+        }
+      }
     }
-  }, [params.id]);
+    fetchData();
+  }, [params.id, studentIdsStr]);
 
   useEffect(() => {
     if (exam && !isLoading && searchParams.get('download') === 'true') {
@@ -89,16 +106,35 @@ export default function ExamPreviewPage() {
 
       {/* Paper Content */}
       <div className="max-w-[850px] mx-auto mt-8 px-4 sm:px-6 print:mt-0 print:px-0">
-        <div ref={contentRef} id="exam-paper" className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-10 print:shadow-none print:border-none print:p-0">
-          
-          {/* Exam Header */}
-          <div className="text-center mb-10 pb-8 border-b-2 border-gray-900">
-            <h1 className="text-2xl font-black mb-2 tracking-tight uppercase">{exam.title}</h1>
-            <div className="flex items-center justify-center gap-8 text-[14px] font-bold">
-              <span>Time Allowed: {exam.durationMinutes} Minutes</span>
-              <span>Total Marks: {exam.totalMarks}</span>
-            </div>
-          </div>
+        <div ref={contentRef} id="exam-paper">
+          {(students.length > 0 ? students : [null]).map((student, sIdx) => (
+            <div key={student ? student.id : 'default'} className={`bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-10 print:shadow-none print:border-none print:p-0 ${sIdx > 0 ? 'mt-8 print:mt-0 print:break-before-page' : ''}`}>
+              
+              {/* Exam Header */}
+              <div className="text-center mb-6 pb-6 border-b-2 border-gray-900">
+                <h1 className="text-2xl font-black mb-2 tracking-tight uppercase">{exam.title}</h1>
+                <div className="flex items-center justify-center gap-8 text-[14px] font-bold">
+                  <span>Time Allowed: {exam.durationMinutes} Minutes</span>
+                  <span>Total Marks: {exam.totalMarks}</span>
+                </div>
+              </div>
+
+              {student && (
+                <div className="mb-8 grid grid-cols-2 gap-4 border border-gray-300 p-4 rounded-xl">
+                  <div>
+                    <span className="text-gray-500 text-xs font-bold uppercase tracking-wider">Student Name</span>
+                    <p className="font-bold text-gray-900 text-sm mt-1">{student.firstName} {student.lastName}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-xs font-bold uppercase tracking-wider">Roll Number</span>
+                    <p className="font-bold text-gray-900 text-sm mt-1">{student.studentProfile?.rollNo || student.studentProfile?.admissionNo || '-'}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-500 text-xs font-bold uppercase tracking-wider">Class</span>
+                    <p className="font-bold text-gray-900 text-sm mt-1">Grade {student.studentProfile?.gradeId}{student.studentProfile?.section ? ` - ${student.studentProfile.section}` : ''}</p>
+                  </div>
+                </div>
+              )}
 
           {/* Instructions */}
           <div className="mb-10 text-[13px]">
@@ -146,9 +182,11 @@ export default function ExamPreviewPage() {
             })}
           </div>
 
-          <div className="mt-16 text-center text-[12px] font-bold text-gray-400 uppercase tracking-wider">
-            *** End of Question Paper ***
-          </div>
+              <div className="mt-16 text-center text-[12px] font-bold text-gray-400 uppercase tracking-wider">
+                *** End of Question Paper ***
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

@@ -98,8 +98,13 @@ export default function SMEReportsPage() {
                   if (job.startTime && job.endTime) {
                     const start = new Date(job.startTime).getTime();
                     const end = new Date(job.endTime).getTime();
-                    const seconds = Math.round((end - start) / 1000);
-                    timeTaken = seconds < 60 ? `${seconds} seconds` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+                    const seconds = Math.round(Math.abs(end - start) / 1000);
+                    
+                    if (job.status === 'failed') {
+                      timeTaken = 'N/A';
+                    } else {
+                      timeTaken = seconds < 60 ? `${seconds} seconds` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+                    }
                   } else if (job.status === 'processing' && job.startTime) {
                     const start = new Date(job.startTime).getTime();
                     const now = new Date().getTime();

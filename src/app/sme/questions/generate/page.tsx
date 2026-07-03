@@ -100,7 +100,16 @@ export default function GenerateQuestionsPage() {
     additional_instructions: '',
   });
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { 
+    setMounted(true); 
+    const savedJobId = localStorage.getItem('activeGenJobId');
+    if (savedJobId) {
+      setJobId(savedJobId);
+      setLoading(true);
+      setCurrentStep(2);
+      // We will call pollJobStatus(savedJobId) in a separate effect or just rely on it
+    }
+  }, []);
 
   const curriculumGrade = formData.term === '1' ? parseInt(formData.grade_level) - 1 : parseInt(formData.grade_level);
 
@@ -203,26 +212,50 @@ export default function GenerateQuestionsPage() {
       const res = await apiClient.get(`/ai/questions/job/${id}`);
       const data = res.data;
       const pct = data.progress || 0;
-      setProgress(pct);
-      setJobStatus(data.state);
-      if (pct < 15) setActiveGenStep(0);
-      else if (pct < 30) setActiveGenStep(1);
-      else if (pct < 50) setActiveGenStep(2);
-      else if (pct < 80) setActiveGenStep(3);
-      else if (pct < 95) setActiveGenStep(4);
-      else setActiveGenStep(5);
+      
+      if (data.state !== 'completed') {
+        setProgress(pct);
+        setJobStatus(data.state);
+        if (pct < 15) setActiveGenStep(0);
+        else if (pct < 30) setActiveGenStep(1);
+        else if (pct < 50) setActiveGenStep(2);
+        else if (pct < 80) setActiveGenStep(3);
+        else if (pct < 95) setActiveGenStep(4);
+        else setActiveGenStep(5);
+      }
+
       if (data.state === 'completed') {
-        setLoading(false);
-        setCurrentStep(3);
-        setGeneratedCount(data.question_ids?.length || 0);
-        setSuccessMsg('Questions generated successfully!');
-        if (data.question_ids?.length > 0) {
-          try {
-            const qRes = await apiClient.get(`/questions?ids=${data.question_ids.join(',')}`);
-            setGeneratedQuestions(qRes.data.data || []);
-          } catch (e) { console.error('Failed to fetch generated questions', e); }
-        }
+        localStorage.removeItem('activeGenJobId');
+        setProgress(100);
+        setJobStatus('completed');
+        
+        // Artificial delay sequence to ensure user sees all steps complete
+        let currentVisualStep = pct < 15 ? 0 : pct < 30 ? 1 : pct < 50 ? 2 : pct < 80 ? 3 : pct < 95 ? 4 : 5;
+        
+        const finishSequence = async () => {
+          while (currentVisualStep <= 5) {
+            setActiveGenStep(currentVisualStep);
+            await new Promise(r => setTimeout(r, 500)); // 500ms delay per step
+            currentVisualStep++;
+          }
+          setActiveGenStep(6); // All steps done
+          await new Promise(r => setTimeout(r, 400)); // final pause before hiding
+          
+          setLoading(false);
+          setCurrentStep(3);
+          setGeneratedCount(data.question_ids?.length || 0);
+          setSuccessMsg('Questions generated successfully!');
+          if (data.question_ids?.length > 0) {
+            try {
+              const qRes = await apiClient.get(`/questions?ids=${data.question_ids.join(',')}`);
+              setGeneratedQuestions(qRes.data.data || []);
+            } catch (e) { console.error('Failed to fetch generated questions', e); }
+          }
+        };
+        finishSequence();
+        
       } else if (data.state === 'failed') {
+        localStorage.removeItem('activeGenJobId');
         setLoading(false);
         setErrorMsg(`Generation failed: ${data.failedReason || 'Unknown error'}`);
       } else {
@@ -232,8 +265,18 @@ export default function GenerateQuestionsPage() {
     } catch (err) {
       console.error('Failed to poll status', err);
       setLoading(false);
+      localStorage.removeItem('activeGenJobId');
     }
   };
+
+  useEffect(() => {
+    if (mounted) {
+      const savedJobId = localStorage.getItem('activeGenJobId');
+      if (savedJobId) {
+        pollJobStatus(savedJobId);
+      }
+    }
+  }, [mounted]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -261,6 +304,7 @@ export default function GenerateQuestionsPage() {
       const newJobId = res.data.job_id;
       if (newJobId) {
         setJobId(newJobId);
+        localStorage.setItem('activeGenJobId', newJobId);
         pollJobStatus(newJobId);
       } else {
         setSuccessMsg(res.data.message || 'AI Question generation task queued successfully!');
@@ -465,7 +509,6 @@ export default function GenerateQuestionsPage() {
             { num: 1, title: 'Configure', desc: 'Set up generation parameters', icon: Settings },
             { num: 2, title: 'Generate', desc: 'AI will generate questions', icon: Wand2 },
             { num: 3, title: 'Review', desc: 'Review and edit generated questions', icon: Eye },
-            { num: 4, title: 'Save', desc: 'Save draft or submit for review', icon: Save },
           ].map((step, idx) => {
             const isCompleted = currentStep > step.num;
             const isActive = currentStep === step.num;
@@ -487,7 +530,7 @@ export default function GenerateQuestionsPage() {
                     <p className="text-[11px] font-medium text-gray-400 leading-tight whitespace-nowrap">{step.desc}</p>
                   </div>
                 </div>
-                {idx < 3 && (
+                {idx < 2 && (
                   <div className="flex-1 mx-5">
                     <div className="relative h-[3px] rounded-full bg-gray-100 overflow-hidden">
                       <div className={`absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out ${
@@ -586,7 +629,7 @@ export default function GenerateQuestionsPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => { setCurrentStep(1); setSuccessMsg(''); setErrorMsg(''); setGeneratedCount(0); setActiveGenStep(0); }} className="text-xs font-bold text-gray-500 hover:text-gray-700 bg-white/80 hover:bg-white px-3.5 py-2 rounded-lg border border-gray-200 transition-colors">Configure Again</button>
+                <button onClick={() => { setCurrentStep(1); setSuccessMsg(''); setErrorMsg(''); setGeneratedCount(0); setActiveGenStep(0); localStorage.removeItem('activeGenJobId'); }} className="text-xs font-bold text-gray-500 hover:text-gray-700 bg-white/80 hover:bg-white px-3.5 py-2 rounded-lg border border-gray-200 transition-colors">Configure Again</button>
                 <a href={`/sme/questions/review${jobId ? `?jobId=${jobId}` : ''}`} className="flex items-center gap-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-lg transition-colors"><Eye size={14} />Review Questions</a>
               </div>
             </div>
@@ -603,7 +646,7 @@ export default function GenerateQuestionsPage() {
                 <AlertCircle className="text-red-500 mt-0.5 flex-shrink-0" size={18} />
                 <div><h4 className="text-sm font-bold text-red-800">Generation Failed</h4><p className="text-xs font-medium text-red-600 mt-1">{errorMsg}</p></div>
               </div>
-              <button onClick={() => { setCurrentStep(1); setErrorMsg(''); setSuccessMsg(''); setGeneratedCount(0); setJobId(null); setProgress(0); setJobStatus(''); setActiveGenStep(0); }} className="text-xs font-bold text-white bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"><Wand2 size={14} />Retry</button>
+              <button onClick={() => { setCurrentStep(1); setErrorMsg(''); setSuccessMsg(''); setGeneratedCount(0); setJobId(null); setProgress(0); setJobStatus(''); setActiveGenStep(0); localStorage.removeItem('activeGenJobId'); }} className="text-xs font-bold text-white bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"><Wand2 size={14} />Retry</button>
             </div>
           )}
         </div>
@@ -944,7 +987,40 @@ export default function GenerateQuestionsPage() {
                 {/* Form Grid */}
                 <div className="px-8 pb-8 space-y-6">
 
-                  {/* Row 1: Grade / Subject / Competency */}
+                  {/* Row 1: Assessment Term */}
+                  <div className="bg-indigo-50/60 border border-indigo-100 rounded-xl p-4">
+                    <label className="block text-xs font-bold text-gray-700 mb-2">Assessment Term <span className="text-red-400">*</span></label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.term === '1' ? 'border-indigo-500 bg-white shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                        <input type="radio" name="term" value="1" checked={formData.term === '1'} onChange={handleChange} className="hidden" />
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${formData.term === '1' ? 'border-indigo-500' : 'border-gray-300'}`}>
+                          {formData.term === '1' && <div className="w-3 h-3 rounded-full bg-indigo-500" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900">Term 1 — Diagnostic</p>
+                          <p className="text-[11px] font-medium text-gray-500">Uses <span className="font-bold text-indigo-600">Grade {parseInt(formData.grade_level) - 1}</span> curriculum</p>
+                        </div>
+                      </label>
+                      <label className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.term === '2' ? 'border-indigo-500 bg-white shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                        <input type="radio" name="term" value="2" checked={formData.term === '2'} onChange={handleChange} className="hidden" />
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${formData.term === '2' ? 'border-indigo-500' : 'border-gray-300'}`}>
+                          {formData.term === '2' && <div className="w-3 h-3 rounded-full bg-indigo-500" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900">Term 2 — Achievement</p>
+                          <p className="text-[11px] font-medium text-gray-500">Uses <span className="font-bold text-indigo-600">Grade {formData.grade_level}</span> curriculum</p>
+                        </div>
+                      </label>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-2 flex items-center gap-1">
+                      <Info size={12} />
+                      {formData.term === '1'
+                        ? `Assessing Grade ${formData.grade_level} students on Grade ${parseInt(formData.grade_level) - 1} content (previous year's curriculum)`
+                        : `Assessing Grade ${formData.grade_level} students on Grade ${formData.grade_level} content (current year's curriculum)`}
+                    </p>
+                  </div>
+
+                  {/* Row 2: Grade / Subject / Competency */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1.5">Grade <span className="text-red-400">*</span></label>
@@ -977,39 +1053,6 @@ export default function GenerateQuestionsPage() {
                         <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                       </div>
                     </div>
-                  </div>
-
-                  {/* Row 1a: Term Selector — Controls which curriculum grade is used */}
-                  <div className="bg-indigo-50/60 border border-indigo-100 rounded-xl p-4">
-                    <label className="block text-xs font-bold text-gray-700 mb-2">Assessment Term <span className="text-red-400">*</span></label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <label className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.term === '1' ? 'border-indigo-500 bg-white shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-                        <input type="radio" name="term" value="1" checked={formData.term === '1'} onChange={handleChange} className="hidden" />
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${formData.term === '1' ? 'border-indigo-500' : 'border-gray-300'}`}>
-                          {formData.term === '1' && <div className="w-3 h-3 rounded-full bg-indigo-500" />}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-gray-900">Term 1 — Diagnostic</p>
-                          <p className="text-[11px] font-medium text-gray-500">Uses <span className="font-bold text-indigo-600">Grade {parseInt(formData.grade_level) - 1}</span> curriculum</p>
-                        </div>
-                      </label>
-                      <label className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.term === '2' ? 'border-indigo-500 bg-white shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-                        <input type="radio" name="term" value="2" checked={formData.term === '2'} onChange={handleChange} className="hidden" />
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${formData.term === '2' ? 'border-indigo-500' : 'border-gray-300'}`}>
-                          {formData.term === '2' && <div className="w-3 h-3 rounded-full bg-indigo-500" />}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-gray-900">Term 2 — Achievement</p>
-                          <p className="text-[11px] font-medium text-gray-500">Uses <span className="font-bold text-indigo-600">Grade {formData.grade_level}</span> curriculum</p>
-                        </div>
-                      </label>
-                    </div>
-                    <p className="text-[11px] text-gray-500 mt-2 flex items-center gap-1">
-                      <Info size={12} />
-                      {formData.term === '1'
-                        ? `Assessing Grade ${formData.grade_level} students on Grade ${parseInt(formData.grade_level) - 1} content (previous year's curriculum)`
-                        : `Assessing Grade ${formData.grade_level} students on Grade ${formData.grade_level} content (current year's curriculum)`}
-                    </p>
                   </div>
 
                   {/* Row 2: Learning Outcome / Bloom Level / Difficulty */}

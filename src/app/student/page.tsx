@@ -13,23 +13,33 @@ export default function StudentRedirect() {
   useEffect(() => {
     const fetchExamAndRedirect = async () => {
       try {
-        // 1. Fetch available LAT exams for the student's grade
+        // 1. First, check if the teacher has directly assigned an exam to this student
+        const upcomingRes = await apiClient.get('/exams/student/upcoming');
+        if (upcomingRes.data && upcomingRes.data.length > 0) {
+          // Found an assigned exam! Route directly to it using the student_exam ID
+          const studentExamId = upcomingRes.data[0].id;
+          router.replace(`/student/exam/${studentExamId}`);
+          return;
+        }
+
+        // 2. If no direct assignment, check for available self-serve papers for their grade
         const res = await apiClient.get('/exams/student/available-papers');
         
         if (res.data && res.data.length > 0) {
-          // 2. We have a paper! Let's start the self-serve attempt on the fly
           const paperId = res.data[0].id;
           const startRes = await apiClient.post('/exams/student/start-paper', { paper_id: paperId });
           
-          // 3. Navigate to the newly generated attempt ID
-          if (startRes.data && startRes.data.id) {
-            router.replace(`/student/exam/${startRes.data.id}`);
+          const attemptId = startRes.data?.attempt_id || startRes.data?.id;
+          if (attemptId) {
+            router.replace(`/student/exam/${attemptId}`);
+          } else {
+            setLoading(false);
           }
         } else {
           setLoading(false);
         }
-      } catch (err) {
-        console.error('Failed to load self-serve exams:', err);
+      } catch (err: any) {
+        console.error('Failed to load exams:', err);
         setLoading(false);
         setError(true);
       }
