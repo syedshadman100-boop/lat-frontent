@@ -78,16 +78,18 @@ export default function StudentOverviewPage() {
   const { summary, overallPerformance, gradeWiseAnalysis } = apiData;
 
   const formatGrades = (grades: any) => {
-    if (!grades) return "3, 5 and 8";
+    if (!grades) return "3, 6 and 9";
     if (Array.isArray(grades)) {
-      if (grades.length === 0) return "3, 5 and 8";
-      if (grades.length === 1) return grades[0];
-      if (grades.length === 2) return `${grades[0]} and ${grades[1]}`;
-      return `${grades.slice(0, -1).join(', ')} and ${grades[grades.length - 1]}`;
+      const filtered = grades.filter(g => String(g) !== '7');
+      if (filtered.length === 0) return "3, 6 and 9";
+      if (filtered.length === 1) return filtered[0];
+      if (filtered.length === 2) return `${filtered[0]} and ${filtered[1]}`;
+      return `${filtered.slice(0, -1).join(', ')} and ${filtered[filtered.length - 1]}`;
     }
-    const gStr = String(grades).trim();
-    if (gStr === "358" || gStr === "3,5,8" || gStr === "3, 5, 8") return "3, 5 and 8";
-    return gStr;
+    let gStr = String(grades).trim();
+    gStr = gStr.replace(/,? ?7/g, '').trim(); // Try to strip 7 out of strings
+    if (gStr === "358" || gStr === "3,5,8" || gStr === "3, 5, 8" || gStr === "369" || gStr === "3,6,9" || gStr === "3, 6, 9" || gStr === "3, 6, and 9") return "3, 6 and 9";
+    return gStr || "3, 6 and 9";
   };
 
   return (
@@ -233,7 +235,7 @@ export default function StudentOverviewPage() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {gradeWiseAnalysis.map((gradeData: any, idx: number) => {
+            {gradeWiseAnalysis.filter((g: any) => g.grade !== 7 && g.grade !== '7').map((gradeData: any, idx: number) => {
               // Generate distinct color themes for each card
               const themes = [
                 { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-100', accent: 'bg-blue-500', icon: 'text-blue-500' },

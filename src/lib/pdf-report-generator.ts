@@ -202,6 +202,7 @@ if (!apiData) return;
   const gradeKeys = Object.keys(stGrades)
     .filter(k => k.startsWith('grade'))
     .map(k => parseInt(k.replace('grade', ''), 10))
+    .filter(g => g !== 7) // Remove Grade 7
     .sort((a, b) => a - b);
 
   if (gradeKeys.length === 0) {
@@ -558,7 +559,7 @@ if (!apiData) return;
   // -----------------------------------------------------
   // GRADE-WISE ANALYSIS (DYNAMIC)
   // -----------------------------------------------------
-  const gradeWise = apiData.gradeWiseAnalysis || [];
+  const gradeWise = (apiData.gradeWiseAnalysis || []).filter((g: any) => g.grade !== 7 && g.grade !== '7');
   
   gradeWise.forEach((gradeData: any, idx: number) => {
     doc.addPage();

@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import apiClient from '@/lib/api-client';
+import 'katex/dist/katex.min.css';
+import Latex from 'react-latex-next';
 
-export default function OfflineExamPrintPage() {
+function OfflineExamPrintContent() {
   const searchParams = useSearchParams();
   const studentsParam = searchParams?.get('students');
   const paperParam = searchParams?.get('paper');
@@ -140,7 +142,9 @@ export default function OfflineExamPrintPage() {
                   <div className="flex gap-3">
                     <span className="font-bold text-lg">{qIdx + 1}.</span>
                     <div className="flex-1">
-                      <p className="text-lg font-medium mb-4">{q.questionText || q.question_text}</p>
+                      <div className="text-lg font-medium mb-4">
+                        <Latex>{q.questionText || q.question_text || ''}</Latex>
+                      </div>
                       
                       {q.mediaUrl && (
                         <div className="mb-4 grid gap-4 max-w-sm">
@@ -152,11 +156,11 @@ export default function OfflineExamPrintPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8 pl-2">
                           {q.options.map((opt: any) => (
                             <div key={opt.id || opt.optionKey || opt.option_key} className="flex items-start gap-3">
-                              <div className="w-6 h-6 shrink-0 border-2 border-black rounded-full flex items-center justify-center font-bold text-sm">
+                              <div className="w-6 h-6 shrink-0 border-2 border-black rounded-full flex items-center justify-center font-bold text-sm mt-1">
                                 {opt.optionKey || opt.option_key}
                               </div>
-                              <div className="flex-1">
-                                <span className="text-base">{opt.optionText || opt.option_text}</span>
+                              <div className="flex-1 text-base">
+                                <Latex>{opt.optionText || opt.option_text || ''}</Latex>
                                 {opt.mediaUrl && (
                                   <img src={opt.mediaUrl} alt="Option image" className="mt-2 max-w-[150px] border border-gray-200" />
                                 )}
@@ -183,5 +187,17 @@ export default function OfflineExamPrintPage() {
         </div>
       ))}
     </div>
+  );
+}
+
+export default function OfflineExamPrintPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-xl font-medium text-gray-500 animate-pulse">Loading...</p>
+      </div>
+    }>
+      <OfflineExamPrintContent />
+    </Suspense>
   );
 }

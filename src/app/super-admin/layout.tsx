@@ -10,8 +10,9 @@ const MENU_GROUPS = [
     title: 'MAIN',
     items: [
       { name: 'Dashboard', href: '/super-admin/dashboard', icon: LayoutDashboard },
+      { name: 'Assessment Blueprints', href: '/super-admin/questions/blueprint', icon: FileQuestion },
       { name: 'Final Review', href: '/super-admin/questions/review', icon: FileQuestion },
-      { name: 'Approved Questions', href: '/super-admin/questions/blueprint', icon: CheckCircle2 },
+      { name: 'Approved Questions', href: '/super-admin/questions/approved', icon: CheckCircle2 },
       { name: 'LAT Exam', href: '/super-admin/lat-exams', icon: FileText },
       { name: 'Users management', href: '/super-admin/users', icon: Users },
     ],

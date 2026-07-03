@@ -1,303 +1,342 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Search, Loader2, ChevronRight, Filter, BookOpen, Brain, Layers, BarChart } from 'lucide-react';
+import { Loader2, FileQuestion, BookOpen, Layers, BarChart, Clock, Eye, AlertCircle, CheckCircle2, Search, Filter, ArrowLeft } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 
-export default function ApprovedQuestionsPage() {
-  const [questions, setQuestions] = useState<any[]>([]);
+export default function AssessmentBlueprintsPage() {
+  const [allQuestions, setAllQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [totalCount, setTotalCount] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
   
-  // Filters
-  const [filters, setFilters] = useState({
-    subject_id: '',
-    grade_level: '',
-    difficulty: '',
-    bloom_level: '',
-    search: '',
-  });
-
-  const fetchQuestions = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.append('status', 'approved');
-      params.append('limit', '50');
-      
-      if (filters.subject_id) params.append('subject_id', filters.subject_id);
-      if (filters.grade_level) params.append('grade_level', filters.grade_level);
-      if (filters.difficulty) params.append('difficulty', filters.difficulty);
-      if (filters.bloom_level) params.append('bloom_level', filters.bloom_level);
-      if (filters.search) params.append('search', filters.search);
-
-      const res = await apiClient.get(`/questions?${params.toString()}`);
-      setQuestions(res.data.data);
-      if (res.data.meta && res.data.meta.total !== undefined) {
-        setTotalCount(res.data.meta.total);
-      } else {
-        setTotalCount(res.data.data.length);
-      }
-    } catch (err) {
-      console.error('Failed to fetch questions', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // If null, show the summary table. If set, show the detailed questions for that group.
+  const [selectedGroup, setSelectedGroup] = useState<{ subject: string; grade: number | string; status: string } | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchQuestions();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [filters]);
+    const fetchQuestions = async () => {
+      try {
+        const res = await apiClient.get('/questions?status=approved,sme_approved,published&limit=1000');
+        setAllQuestions(res.data.data || []);
+      } catch (err) {
+        console.error('Failed to fetch questions', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchQuestions();
+  }, []);
 
-  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
+  // Group questions by Subject, Grade, AND Status for the summary table
+  const groupedQuestions = React.useMemo(() => {
+    const grouped = allQuestions.reduce((acc: any, q: any) => {
+      const subjectName = q.subject?.name || 'Unknown';
+      const gradeLevel = q.assessmentGrade || q.gradeLevel || 'Unknown';
+      const status = q.aiValidationStatus || 'approved';
+      const key = `${subjectName}-${gradeLevel}-${status}`;
+      
+      if (!acc[key]) {
+        acc[key] = {
+          id: key,
+          subject: { name: subjectName },
+          assessmentGrade: gradeLevel,
+          term: q.term || '1',
+          totalQuestions: 0,
+          totalMarks: 0,
+          status: status,
+          createdAt: q.createdAt || new Date().toISOString(),
+        };
+      }
+      
+      acc[key].totalQuestions += 1;
+      acc[key].totalMarks += (q.marks || 1);
+      
+      if (new Date(q.createdAt) > new Date(acc[key].createdAt)) {
+        acc[key].createdAt = q.createdAt;
+      }
+      
+      return acc;
+    }, {});
+    
+    return Object.values(grouped) as any[];
+  }, [allQuestions]);
+
+  const filteredGroups = groupedQuestions.filter(bp => {
+    return bp.subject?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const handleViewDetails = (subjectName: string, gradeLevel: number | string, status: string) => {
+    setSelectedGroup({ subject: subjectName, grade: gradeLevel, status });
+    setSearchTerm('');
   };
 
-  const getDifficultyColor = (diff: string) => {
-    switch (diff?.toLowerCase()) {
-      case 'easy': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-      case 'hard': return 'bg-rose-100 text-rose-700 border-rose-200';
-      case 'medium': 
-      default: return 'bg-amber-100 text-amber-700 border-amber-200';
-    }
+  const handleBack = () => {
+    setSelectedGroup(null);
+    setSearchTerm('');
   };
 
-  const getBloomColor = (bloom: string) => {
-    switch (bloom?.toLowerCase()) {
-      case 'understand': return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'apply': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
-      case 'analyze': return 'bg-violet-100 text-violet-700 border-violet-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
+  // Detailed View Component
+  if (selectedGroup) {
+    const detailQuestions = allQuestions.filter(
+      q => (q.subject?.name || 'Unknown') === selectedGroup.subject && 
+           (q.assessmentGrade || q.gradeLevel || 'Unknown').toString() === selectedGroup.grade.toString() &&
+           (q.aiValidationStatus || 'approved') === selectedGroup.status
+    );
 
+    const filteredDetailQuestions = detailQuestions.filter(q => 
+      q.questionText?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+      <div className="min-h-screen p-6 md:p-10 text-slate-800 font-sans max-w-[1600px] mx-auto bg-slate-50/50">
+        <button 
+          onClick={handleBack}
+          className="mb-6 flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-emerald-600 transition-colors"
+        >
+          <ArrowLeft size={16} /> Back to Summary Table
+        </button>
+
+        <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg shadow-emerald-500/20">
+                <CheckCircle2 className="text-white" size={24} strokeWidth={2.5} />
+              </div>
+              {selectedGroup.subject} - Grade {selectedGroup.grade}
+              <span className={`ml-3 inline-flex items-center gap-1.5 px-3 py-1 text-sm font-extrabold rounded-full uppercase ${
+                selectedGroup.status === 'published' ? 'bg-indigo-100 text-indigo-700' :
+                selectedGroup.status === 'sme_approved' ? 'bg-blue-100 text-blue-700' :
+                'bg-emerald-100 text-emerald-700'
+              }`}>
+                {selectedGroup.status.replace('_', ' ')}
+              </span>
+              <span className="ml-3 inline-flex items-center justify-center px-3 py-1 text-sm font-extrabold bg-slate-900 text-white rounded-full shadow-sm">
+                {filteredDetailQuestions.length} Questions
+              </span>
+            </h1>
+            <p className="text-sm font-medium text-slate-500 mt-2 max-w-2xl">
+              Detailed list of final approved questions for this specific subject, grade, and status.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-4 mb-8">
+          <div className="relative flex-1 max-w-md">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search in these questions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-400 transition-all shadow-sm"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          {filteredDetailQuestions.map((q, idx) => (
+            <div key={q.id} className="bg-white rounded-[2rem] border border-slate-200 shadow-lg shadow-slate-200/40 p-6 md:p-8 transition-all hover:shadow-xl hover:border-emerald-200/50">
+              <div className="flex flex-col md:flex-row justify-between gap-6">
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-4">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-extrabold tracking-wide uppercase">
+                      <BookOpen size={12} /> {q.subject?.name || 'Unknown Subject'}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-extrabold tracking-wide uppercase">
+                      <Layers size={12} /> Grade {q.assessmentGrade || q.gradeLevel || 'N/A'}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-xs font-extrabold tracking-wide uppercase">
+                      {q.difficulty || 'Normal'}
+                    </span>
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold tracking-wide uppercase ${
+                      q.aiValidationStatus === 'published' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' :
+                      q.aiValidationStatus === 'sme_approved' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                      'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                    }`}>
+                      <CheckCircle2 size={12} /> {q.aiValidationStatus ? q.aiValidationStatus.replace('_', ' ') : 'Approved'}
+                    </span>
+                  </div>
+
+                  <div className="text-lg font-black text-slate-900 leading-relaxed mb-6">
+                    <span className="text-slate-400 mr-2">{idx + 1}.</span>
+                    {q.questionText}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                    {q.options && q.options.map((opt: any) => (
+                      <div 
+                        key={opt.id} 
+                        className={`p-4 rounded-xl border-2 transition-all flex items-start gap-3 ${
+                          opt.isCorrect 
+                            ? 'bg-emerald-50 border-emerald-500 text-emerald-900 shadow-sm' 
+                            : 'bg-white border-slate-100 text-slate-600 hover:border-slate-200'
+                        }`}
+                      >
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
+                          opt.isCorrect ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {opt.optionKey || '-'}
+                        </div>
+                        <div className="font-semibold text-sm pt-0.5">{opt.optionText}</div>
+                        {opt.isCorrect && (
+                          <div className="ml-auto">
+                            <CheckCircle2 size={18} className="text-emerald-500" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="md:w-64 shrink-0 bg-slate-50 rounded-2xl p-5 border border-slate-100 h-fit">
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Details</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Topic / Competency</p>
+                      <p className="text-sm font-bold text-slate-800">{q.topic || 'General'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Bloom Level</p>
+                      <p className="text-sm font-bold text-slate-800">{q.bloomLevel || 'Recall'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Date Approved</p>
+                      <p className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                        <Clock size={14} className="text-slate-400" />
+                        {new Date(q.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Summary Table View
   return (
     <div className="min-h-screen p-6 md:p-10 text-slate-800 font-sans max-w-[1600px] mx-auto bg-slate-50/50">
-
-      {/* Header Section */}
       <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl shadow-lg shadow-emerald-500/20">
-              <CheckCircle2 className="text-white" size={24} strokeWidth={2.5} />
+            <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/20">
+              <FileQuestion className="text-white" size={24} strokeWidth={2.5} />
             </div>
-            Approved Questions Bank
+            Assessment Blueprints (Approved Summary)
             {!loading && (
               <span className="ml-3 inline-flex items-center justify-center px-3 py-1 text-sm font-extrabold bg-slate-900 text-white rounded-full shadow-sm">
-                {totalCount} Total
+                {filteredGroups.length} Groups
               </span>
             )}
           </h1>
           <p className="text-sm font-medium text-slate-500 mt-2 max-w-2xl">
-            A premium repository of all curated and validated assessment questions ready for production use. Use the dynamic filters to explore the bank.
+            Summary of all approved questions grouped by Subject, Grade, and Status. Click 'View' to see the full questions.
           </p>
         </div>
       </div>
 
-      <div className="flex flex-col xl:flex-row gap-8">
-        
-        {/* Left Column: Premium Filters Sidebar */}
-        <div className="w-full xl:w-80 flex-shrink-0">
-          <div className="bg-white/70 backdrop-blur-xl rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-200/40 p-6 sticky top-8">
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2 pb-4 border-b border-slate-100">
-              <Filter size={16} className="text-indigo-500" strokeWidth={3} /> Refine Search
-            </h2>
-            
-            <div className="space-y-6">
-              {/* Search */}
-              <div className="group">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 transition-colors group-focus-within:text-indigo-500">Keyword Search</label>
-                <div className="relative">
-                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                  <input
-                    type="text"
-                    name="search"
-                    value={filters.search}
-                    onChange={handleFilterChange}
-                    placeholder="Search query..."
-                    className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all shadow-sm"
-                  />
-                </div>
-              </div>
-
-              {/* Subject */}
-              <div className="group">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 transition-colors group-focus-within:text-indigo-500">Subject Mapping</label>
-                <div className="relative">
-                  <BookOpen size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors pointer-events-none" />
-                  <select name="subject_id" value={filters.subject_id} onChange={handleFilterChange} className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all shadow-sm cursor-pointer appearance-none">
-                    <option value="">All Subjects</option>
-                    <option value="1">Mathematics</option>
-                    <option value="2">Science</option>
-                    <option value="3">English</option>
-                  </select>
-                  <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none rotate-90" />
-                </div>
-              </div>
-
-              {/* Grade Level */}
-              <div className="group">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 transition-colors group-focus-within:text-indigo-500">Grade Level</label>
-                <div className="relative">
-                  <Layers size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors pointer-events-none" />
-                  <select name="grade_level" value={filters.grade_level} onChange={handleFilterChange} className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all shadow-sm cursor-pointer appearance-none">
-                    <option value="">All Grades</option>
-                    <option value="3">Grade 3</option>
-                    <option value="6">Grade 6</option>
-                    <option value="9">Grade 9</option>
-                  </select>
-                  <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none rotate-90" />
-                </div>
-              </div>
-
-              {/* Difficulty */}
-              <div className="group">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 transition-colors group-focus-within:text-indigo-500">Difficulty Curve</label>
-                <div className="relative">
-                  <BarChart size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors pointer-events-none" />
-                  <select name="difficulty" value={filters.difficulty} onChange={handleFilterChange} className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all shadow-sm cursor-pointer appearance-none">
-                    <option value="">All Difficulties</option>
-                    <option value="easy">Easy</option>
-                    <option value="medium">Medium</option>
-                    <option value="hard">Hard</option>
-                  </select>
-                  <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none rotate-90" />
-                </div>
-              </div>
-
-              {/* Bloom's Level */}
-              <div className="group">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 transition-colors group-focus-within:text-indigo-500">Bloom's Taxonomy</label>
-                <div className="relative">
-                  <Brain size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors pointer-events-none" />
-                  <select name="bloom_level" value={filters.bloom_level} onChange={handleFilterChange} className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all shadow-sm cursor-pointer appearance-none">
-                    <option value="">All Levels</option>
-                    <option value="understand">Understand</option>
-                    <option value="apply">Apply</option>
-                    <option value="analyze">Analyze</option>
-                  </select>
-                  <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none rotate-90" />
-                </div>
-              </div>
-            </div>
-            
-            {/* Clear Filters Hint */}
-            <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-              <p className="text-[11px] font-semibold text-slate-400">Results update dynamically as you type.</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Dynamic Question List */}
-        <div className="flex-1">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-32 bg-white/50 backdrop-blur-sm rounded-3xl border border-slate-200/50 shadow-sm min-h-[500px]">
-              <div className="relative">
-                <div className="absolute inset-0 bg-indigo-500 blur-xl opacity-20 rounded-full animate-pulse"></div>
-                <Loader2 size={40} className="animate-spin text-indigo-600 relative z-10" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-700 mt-6">Syncing Database...</h3>
-              <p className="text-sm font-medium text-slate-500 mt-1">Retrieving the latest approved questions</p>
-            </div>
-          ) : questions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-32 bg-white/50 backdrop-blur-sm rounded-3xl border border-slate-200/50 border-dashed shadow-sm min-h-[500px]">
-              <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-6">
-                <BookOpen size={32} className="text-slate-400" />
-              </div>
-              <h3 className="text-xl font-black text-slate-800">No Match Found</h3>
-              <p className="text-sm font-medium text-slate-500 mt-2 max-w-md text-center">
-                We couldn't find any approved questions matching your current filter criteria. Try broadening your search.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-6">
-              {questions.map((q, i) => (
-                <div
-                  key={q.id}
-                  className="group bg-white rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 hover:border-indigo-200 transition-all duration-300 overflow-hidden flex flex-col"
-                  style={{ animation: `fadeIn 0.4s ease-out ${i * 0.05}s both` }}
-                >
-                  <style>{`
-                    @keyframes fadeIn {
-                      from { opacity: 0; transform: translateY(10px); }
-                      to { opacity: 1; transform: translateY(0); }
-                    }
-                  `}</style>
-                  
-                  {/* Card Header & Text */}
-                  <div className="p-8 pb-6 flex-1">
-                    <div className="flex items-start justify-between gap-6 mb-6">
-                      <h3 className="text-lg md:text-xl font-black text-slate-800 leading-snug group-hover:text-indigo-950 transition-colors">
-                        {q.questionText}
-                      </h3>
-                      <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 shadow-sm tooltip-trigger relative">
-                        <CheckCircle2 size={16} strokeWidth={3} />
-                        <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold py-1 px-2 rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg">
-                          Approved
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Options Grid */}
-                    {q.options && q.options.length > 0 && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
-                        {q.options.map((opt: any, idx: number) => (
-                          <div 
-                            key={idx} 
-                            className={`relative p-4 rounded-2xl border-2 transition-all duration-200 ${
-                              opt.isCorrect 
-                                ? 'bg-emerald-50/50 border-emerald-400 text-emerald-900 shadow-[0_4px_12px_rgba(16,185,129,0.15)]' 
-                                : 'bg-white border-slate-100 text-slate-600 group-hover:border-slate-200'
-                            }`}
-                          >
-                            <div className="flex items-start gap-4">
-                              <div className={`shrink-0 w-7 h-7 flex items-center justify-center rounded-xl text-[11px] font-black shadow-sm ${
-                                opt.isCorrect 
-                                  ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-emerald-500/30' 
-                                  : 'bg-slate-100 text-slate-500'
-                              }`}>
-                                {opt.optionKey}
-                              </div>
-                              <span className="text-sm font-bold leading-relaxed pt-1">{opt.optionText}</span>
-                            </div>
-                            {opt.isCorrect && (
-                              <div className="absolute top-0 right-0 transform translate-x-1/3 -translate-y-1/3">
-                                <div className="bg-emerald-500 text-white rounded-full p-1 shadow-lg">
-                                  <CheckCircle2 size={12} strokeWidth={4} />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Card Footer (Tags) */}
-                  <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center flex-wrap gap-3">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-600 shadow-sm">
-                      <BookOpen size={14} className="text-slate-400"/> {q.subject?.name || 'Unknown'}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-600 shadow-sm">
-                      <Layers size={14} className="text-slate-400"/> Grade {q.assessmentGrade || q.gradeLevel}
-                    </span>
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold capitalize shadow-sm ${getDifficultyColor(q.difficulty)}`}>
-                      <BarChart size={14} className="opacity-70"/> {q.difficulty || 'Medium'}
-                    </span>
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold capitalize shadow-sm ${getBloomColor(q.bloomTaxonomy)}`}>
-                      <Brain size={14} className="opacity-70"/> {q.bloomTaxonomy}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+      <div className="flex gap-4 mb-8">
+        <div className="relative flex-1 max-w-md">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by subject..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all shadow-sm"
+          />
         </div>
       </div>
 
+      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/40 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-100">
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Subject</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Grade / Term</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Questions</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Marks</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Status</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Latest Update</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest whitespace-nowrap text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-20 text-center">
+                    <Loader2 size={32} className="animate-spin text-indigo-500 mx-auto mb-4" />
+                    <p className="text-sm font-bold text-slate-500">Loading summary...</p>
+                  </td>
+                </tr>
+              ) : filteredGroups.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-20 text-center">
+                    <FileQuestion size={40} className="text-slate-300 mx-auto mb-4" />
+                    <p className="text-lg font-bold text-slate-700">No Groups Found</p>
+                    <p className="text-sm font-medium text-slate-500 mt-1">No approved questions found for this search.</p>
+                  </td>
+                </tr>
+              ) : (
+                filteredGroups.map((bp) => (
+                  <tr key={bp.id} className="hover:bg-slate-50/80 transition-colors group">
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                          <BookOpen size={18} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">{bp.subject?.name}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <p className="text-sm font-bold text-slate-700">Grade {bp.assessmentGrade}</p>
+                      <p className="text-[11px] font-semibold text-slate-400 mt-0.5">Term {bp.term}</p>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-1.5 text-sm font-bold text-slate-700">
+                        <Layers size={14} className="text-slate-400" /> {bp.totalQuestions}
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-1.5 text-sm font-bold text-slate-700">
+                        <BarChart size={14} className="text-slate-400" /> {bp.totalMarks}
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border uppercase ${
+                        bp.status === 'published' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
+                        bp.status === 'sme_approved' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                        'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      }`}>
+                        <CheckCircle2 size={12} /> {bp.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5">
+                      <p className="text-sm font-semibold text-slate-600">
+                        {new Date(bp.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    </td>
+                    <td className="px-6 py-5 text-right">
+                      <button 
+                        onClick={() => handleViewDetails(bp.subject.name, bp.assessmentGrade, bp.status)}
+                        className="inline-flex items-center justify-center px-4 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl text-sm font-bold transition-all shadow-sm"
+                      >
+                        <Eye size={16} className="mr-2" />
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

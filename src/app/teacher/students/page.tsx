@@ -404,7 +404,7 @@ export default function StudentsPage() {
                             <span>Start Exam</span>
                           </button>
 
-                          {student.isOffline && student.studentExamId && student.status !== 'Completed' && (
+                          {student.isOffline && student.studentExamId && (
                             <button
                               onClick={() => {
                                 setTargetStudentForUpload(student);
